@@ -45,15 +45,66 @@ export default function Invite() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [lang, setLang] = useState('en');
-  const [editing, setEditing] = useState(false);
 
   const load = () => api.get(`/public/invite/${token}`).then((d) => { setData(d); return d; }).catch(setError);
   useEffect(() => { load().then((d) => d && setLang(d.guest.language || 'en')); }, [token]);
   useEffect(() => { document.documentElement.lang = lang; document.title = data?.event.name || 'Invitation'; }, [lang, data]);
 
-  const t = T[lang];
-  if (error) return <div className="invite-page"><div className="invite-card"><p>{t.notFound}</p></div></div>;
+  if (error) return <div className="invite-page"><div className="invite-card"><p>{T[lang].notFound}</p></div></div>;
   if (!data) return <div className="invite-page"><div className="loading">…</div></div>;
+  return <InvitationView data={data} lang={lang} setLang={setLang} token={token} onReload={load} />;
+}
+
+/** Loads the Google fonts a design uses (only fonts from the fixed lists). */
+const FONT_WEIGHTS = {
+  'IBM Plex Serif': '400;500;600;700', 'Playfair Display': '400;500;600;700', 'Cormorant Garamond': '400;500;600;700',
+  'Libre Baskerville': '400;700', Lora: '400;500;600;700', Cinzel: '400;500;600;700', 'IBM Plex Sans': '400;500;600;700',
+  Montserrat: '400;500;600;700', 'IBM Plex Sans Arabic': '400;500;600;700', 'Noto Kufi Arabic': '400;500;600;700',
+  'Noto Naskh Arabic': '400;500;600;700', Amiri: '400;700', Tajawal: '400;500;700', Cairo: '400;500;600;700', 'Reem Kufi': '400;500;600;700',
+};
+export function useDesignFonts(design) {
+  useEffect(() => {
+    for (const font of [design?.heading_font, design?.arabic_font]) {
+      if (!font || !FONT_WEIGHTS[font]) continue;
+      const id = `font-${font.replace(/\s+/g, '-')}`;
+      if (document.getElementById(id)) continue;
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, '+')}:wght@${FONT_WEIGHTS[font]}&display=swap`;
+      document.head.appendChild(link);
+    }
+  }, [design?.heading_font, design?.arabic_font]);
+}
+
+/** The design as CSS variables on the page (colours are checked by the server). */
+export function designStyle(d) {
+  if (!d) return undefined;
+  return {
+    '--inv-bg': d.background,
+    '--inv-card': d.card,
+    '--inv-accent': d.accent,
+    '--inv-heading': d.heading,
+    '--inv-text': d.text,
+    '--inv-on-accent': d.on_accent,
+    '--inv-on-bg': d.on_background,
+    '--inv-font-heading': `'${d.heading_font}', Georgia, serif`,
+    '--inv-font-ar': `'${d.arabic_font}', 'IBM Plex Sans Arabic', sans-serif`,
+    ...(d.layout === 'photo' && d.cover_url && {
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("${d.cover_url}")`,
+    }),
+  };
+}
+
+/**
+ * The invitation itself. Used by the guest's page and, with `preview`, by the
+ * design editor (nothing is sent; the RSVP buttons only change the preview).
+ */
+export function InvitationView({ data, lang, setLang, token, onReload, preview = false }) {
+  const [editing, setEditing] = useState(false);
+  const d = data.design;
+  useDesignFonts(d);
+  const t = T[lang];
 
   const { event: e, guest: g, wallet } = data;
   const ar = lang === 'ar';
@@ -65,72 +116,81 @@ export default function Invite() {
   const ua = navigator.userAgent;
   const isApple = /iPhone|iPad|Macintosh/.test(ua);
   const isAndroid = /Android/.test(ua);
+  const kicker = (ar ? d?.kicker_ar : d?.kicker_en) || t.invited;
+  const closing = ar ? d?.closing_ar : d?.closing_en;
+  const layout = d?.layout || 'card';
 
   return (
-    <div className="invite-page" dir={ar ? 'rtl' : 'ltr'}>
+    <div className={`invite-page layout-${layout} ${preview ? 'is-preview' : ''}`} dir={ar ? 'rtl' : 'ltr'} style={designStyle(d)}>
       <button className="lang-toggle" onClick={() => setLang(ar ? 'en' : 'ar')}>{t.lang}</button>
       <article className="invite-card">
-        <Logo height={30} className="invite-logo" />
-        <p className="invite-kicker">{t.invited}</p>
-        <p className="invite-guest">{t.dear} {name}</p>
-        <p className="invite-host">{pick(e.host_name, e.host_name_ar) || data.org} {t.invites}</p>
-        <h1 className="invite-title">{pick(e.name, e.name_ar)}</h1>
-        {pick(e.description, e.description_ar) && <p className="invite-desc">{pick(e.description, e.description_ar)}</p>}
+        {layout === 'card' && d?.cover_url && <img className="invite-cover" src={d.cover_url} alt="" />}
+        <div className="invite-body">
+          {(!d || d.logo === 'yax') && <Logo height={30} className="invite-logo" />}
+          {d?.logo === 'custom' && <img className="invite-own-logo" src={d.logo_url} alt={data.org} />}
+          <p className="invite-kicker">{kicker}</p>
+          <p className="invite-guest">{t.dear} {name}</p>
+          <p className="invite-host">{pick(e.host_name, e.host_name_ar) || data.org} {t.invites}</p>
+          <h1 className="invite-title">{pick(e.name, e.name_ar)}</h1>
+          {pick(e.description, e.description_ar) && <p className="invite-desc">{pick(e.description, e.description_ar)}</p>}
 
-        <dl className="invite-details">
-          <div><dt>{t.when}</dt><dd>{fmt(e.starts_at, lang)}</dd></div>
-          {e.venue && (
-            <div>
-              <dt>{t.where}</dt>
-              <dd>{pick(e.venue, e.venue_ar)}{e.venue_address && <><br /><span className="muted">{e.venue_address}</span></>}
-                {(e.venue_lat != null || e.venue_address) && (
-                  <><br /><a target="_blank" rel="noreferrer" href={e.venue_lat != null ? `https://maps.google.com/?q=${e.venue_lat},${e.venue_lng}` : `https://maps.google.com/?q=${encodeURIComponent(e.venue_address)}`}>{t.map}</a></>
-                )}
-              </dd>
-            </div>
-          )}
-          {e.dress_code && <div><dt>{t.dress}</dt><dd>{pick(e.dress_code, e.dress_code_ar)}</dd></div>}
-        </dl>
-
-        <section className="invite-rsvp">
-          {showForm ? (
-            <RsvpForm t={t} guest={g} companions={data.companions} token={token} deadline={e.rsvp_deadline && fmt(e.rsvp_deadline, lang)}
-              onDone={() => { setEditing(false); load(); }} />
-          ) : (
-            <div className="rsvp-done">
-              <p className="invite-kicker">{t.yourResponse}</p>
-              <p className="rsvp-status">{t.statusLabel[g.rsvp_status] || '—'}{g.rsvp_status === 'attending' && g.rsvp_party_size > 1 ? ` (${g.rsvp_party_size})` : ''}</p>
-              {responded && <p>{t.thanks[g.rsvp_status]}</p>}
-              {data.companions.length > 0 && <p className="muted">{data.companions.map((c) => [c.first_name, c.last_name].filter(Boolean).join(' ')).join(' · ')}</p>}
-              {data.rsvp_closed ? <p className="muted small">{t.closed}</p> : <button className="invite-link-btn" onClick={() => setEditing(true)}>{t.change}</button>}
-            </div>
-          )}
-        </section>
-
-        {g.rsvp_status === 'attending' && (
-          <section className="invite-pass">
-            <p className="invite-kicker">{t.pass}</p>
-            <img className="invite-qr" src={`${base}/qr.svg`} alt="QR code" width="180" height="180" />
-            <p className="muted small">{t.passHint}</p>
-            {(g.table || g.seat) && (
-              <div className="invite-seat">
-                {g.table && <div><span>{t.table}</span><strong>{g.table}</strong></div>}
-                {g.seat && <div><span>{t.seat}</span><strong>{g.seat}</strong></div>}
+          <dl className="invite-details">
+            <div><dt>{t.when}</dt><dd>{fmt(e.starts_at, lang)}</dd></div>
+            {e.venue && (
+              <div>
+                <dt>{t.where}</dt>
+                <dd>{pick(e.venue, e.venue_ar)}{e.venue_address && <><br /><span className="muted">{e.venue_address}</span></>}
+                  {(e.venue_lat != null || e.venue_address) && (
+                    <><br /><a target="_blank" rel="noreferrer" href={e.venue_lat != null ? `https://maps.google.com/?q=${e.venue_lat},${e.venue_lng}` : `https://maps.google.com/?q=${encodeURIComponent(e.venue_address)}`}>{t.map}</a></>
+                  )}
+                </dd>
               </div>
             )}
-            <div className="wallet-buttons">
-              {wallet.apple && !isAndroid && <a className="wallet-btn apple" href={`${base}/pass.pkpass`}>{t.apple}</a>}
-              {wallet.google && !isApple && <a className="wallet-btn google" href={`${base}/google-wallet`}>{t.google}</a>}
-              <a className="wallet-btn cal" href={`${base}/event.ics`}>{t.calendar}</a>
-            </div>
+            {e.dress_code && <div><dt>{t.dress}</dt><dd>{pick(e.dress_code, e.dress_code_ar)}</dd></div>}
+          </dl>
+
+          <section className="invite-rsvp">
+            {showForm ? (
+              <RsvpForm t={t} guest={g} companions={data.companions} token={token} preview={preview} deadline={e.rsvp_deadline && fmt(e.rsvp_deadline, lang)}
+                onDone={() => { setEditing(false); onReload?.(); }} />
+            ) : (
+              <div className="rsvp-done">
+                <p className="invite-kicker">{t.yourResponse}</p>
+                <p className="rsvp-status">{t.statusLabel[g.rsvp_status] || '—'}{g.rsvp_status === 'attending' && g.rsvp_party_size > 1 ? ` (${g.rsvp_party_size})` : ''}</p>
+                {responded && <p>{t.thanks[g.rsvp_status]}</p>}
+                {data.companions.length > 0 && <p className="muted">{data.companions.map((c) => [c.first_name, c.last_name].filter(Boolean).join(' ')).join(' · ')}</p>}
+                {data.rsvp_closed ? <p className="muted small">{t.closed}</p> : <button className="invite-link-btn" onClick={() => setEditing(true)}>{t.change}</button>}
+              </div>
+            )}
           </section>
-        )}
+
+          {g.rsvp_status === 'attending' && (
+            <section className="invite-pass">
+              <p className="invite-kicker">{t.pass}</p>
+              {preview ? <div className="invite-qr invite-qr-sample" aria-label="QR code" /> : <img className="invite-qr" src={`${base}/qr.svg`} alt="QR code" width="180" height="180" />}
+              <p className="muted small">{t.passHint}</p>
+              {(g.table || g.seat) && (
+                <div className="invite-seat">
+                  {g.table && <div><span>{t.table}</span><strong>{g.table}</strong></div>}
+                  {g.seat && <div><span>{t.seat}</span><strong>{g.seat}</strong></div>}
+                </div>
+              )}
+              <div className="wallet-buttons">
+                {(preview || (wallet.apple && !isAndroid)) && <a className="wallet-btn apple" href={preview ? undefined : `${base}/pass.pkpass`}>{t.apple}</a>}
+                {(preview || (wallet.google && !isApple)) && <a className="wallet-btn google" href={preview ? undefined : `${base}/google-wallet`}>{t.google}</a>}
+                <a className="wallet-btn cal" href={preview ? undefined : `${base}/event.ics`}>{t.calendar}</a>
+              </div>
+            </section>
+          )}
+
+          {closing && <p className="invite-closing">{closing}</p>}
+        </div>
       </article>
     </div>
   );
 }
 
-function RsvpForm({ t, guest, companions: existing, token, deadline, onDone }) {
+function RsvpForm({ t, guest, companions: existing, token, deadline, onDone, preview }) {
   const [status, setStatus] = useState(guest.rsvp_status === 'pending' ? '' : guest.rsvp_status);
   const [companions, setCompanions] = useState(existing.map((c) => [c.first_name, c.last_name].filter(Boolean).join(' ')));
   const [dietary, setDietary] = useState(guest.dietary || '');
@@ -140,6 +200,7 @@ function RsvpForm({ t, guest, companions: existing, token, deadline, onDone }) {
 
   async function submit(e) {
     e.preventDefault();
+    if (preview) return; // the design preview never sends anything
     setBusy(true);
     setError(null);
     try {

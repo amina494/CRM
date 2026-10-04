@@ -23,6 +23,7 @@ A guest management CRM for VIP events: invitations and RSVPs, Apple and Google W
 - **Staff**: each person is given access to specific events, with a role per event (see *Security* below). Admins see everything.
 - **Audit trail** (admins): who signed in, viewed or exported guests, changed, deleted or checked in, from which address.
 - **Events**: run several events. Hotels, cars, drivers and staff are shared between them.
+- **Invitation design** (per event, coordinators): start from a theme, then set colours, heading and Arabic fonts, a cover photo (banner or full-page background), your own logo or none, a custom top line and closing note in both languages. A live phone preview shows English and Arabic, before and after accepting, and warns when colours are hard to read. The design is also used by the invitation email and the wallet pass colours. Images (PNG, JPEG or WebP, up to 5 MB) are stored in the database and checked by their content; SVG is refused.
 
 ## Running it
 

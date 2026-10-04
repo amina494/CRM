@@ -53,6 +53,8 @@ function migrate(d) {
     add('activity_log', 'ip', 'TEXT');
     add('events', 'retention_days', 'INTEGER NOT NULL DEFAULT 90');
     add('events', 'anonymised_at', 'TEXT');
+    // 6. Per-event invitation design (colours, fonts, wording), as JSON.
+    add('events', 'design', 'TEXT');
     d.exec('CREATE INDEX IF NOT EXISTS idx_activity_guest ON activity_log(guest_id, created_at)');
     d.exec('CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_log(user_id, created_at)');
 

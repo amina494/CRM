@@ -7,7 +7,9 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { PKPass, PassType } from 'passkit-generator';
 import { config } from '../config.js';
-import { brand, rgb } from '../brand.js';
+import { rgb } from '../brand.js';
+import { get } from '../db.js';
+import { contrast, resolveDesign } from './design.js';
 import { guestDisplayName, localToDate, formatEventDate } from './format.js';
 
 export class WalletNotConfigured extends Error {}
@@ -22,14 +24,31 @@ export function walletStatus() {
 }
 
 // YAX icon and wordmark, rendered from web/public/yax-icon.svg and web/assets/yax-wordmark.svg.
+// logo*.png is off-white (for dark pass colours), logo-dark*.png charcoal (for light ones).
 const ASSETS = new URL('../assets/wallet/', import.meta.url);
-let iconCache;
-function icons() {
-  iconCache ??= Object.fromEntries(
-    ['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'logo@3x.png']
-      .map((f) => [f, fs.readFileSync(new URL(f, ASSETS))]),
-  );
-  return iconCache;
+const fileCache = new Map();
+const asset = (f) => {
+  if (!fileCache.has(f)) fileCache.set(f, fs.readFileSync(new URL(f, ASSETS)));
+  return fileCache.get(f);
+};
+
+/** Pass images for this event's design: the YAX icon, plus its logo choice. */
+function passImages(event, design) {
+  const files = { 'icon.png': asset('icon.png'), 'icon@2x.png': asset('icon@2x.png'), 'icon@3x.png': asset('icon@3x.png') };
+  if (design.logo === 'none') return files;
+  if (design.logo === 'custom') {
+    // Apple Wallet only takes PNG; another format falls back to the YAX logo.
+    const own = get("SELECT mime, data FROM event_assets WHERE event_id = ? AND kind = 'logo'", event.id);
+    if (own?.mime === 'image/png') return { ...files, 'logo.png': Buffer.from(own.data), 'logo@2x.png': Buffer.from(own.data) };
+  }
+  const dark = design.on_background === '#1e1b1a' ? '-dark' : '';
+  return { ...files, 'logo.png': asset(`logo${dark}.png`), 'logo@2x.png': asset(`logo${dark}@2x.png`), 'logo@3x.png': asset(`logo${dark}@3x.png`) };
+}
+
+/** Pass colours: the design's background, readable text, and the accent for labels when it stands out enough. */
+function passColours(design) {
+  const label = contrast(design.accent, design.background) >= 3 ? design.accent : design.on_background;
+  return { background: design.background, foreground: design.on_background, label };
 }
 
 function passDetails(event, guest, extra) {
@@ -50,8 +69,10 @@ export function applePass(event, guest, extra = {}) {
   }
   const a = config.appleWallet;
   const d = passDetails(event, guest, extra);
+  const design = resolveDesign(event);
+  const colours = passColours(design);
   const pass = new PKPass(
-    icons(),
+    passImages(event, design),
     {
       wwdr: fs.readFileSync(a.wwdrPath),
       signerCert: fs.readFileSync(a.signerCertPath),
@@ -65,9 +86,9 @@ export function applePass(event, guest, extra = {}) {
       serialNumber: `event-${event.id}-guest-${guest.id}`, // identifies the pass; not a secret
       organizationName: config.orgName,
       description: d.eventName,
-      backgroundColor: rgb(brand.primary),
-      foregroundColor: rgb(brand.onPrimary),
-      labelColor: rgb(brand.accent),
+      backgroundColor: rgb(colours.background),
+      foregroundColor: rgb(colours.foreground),
+      labelColor: rgb(colours.label),
     },
   );
 
@@ -103,6 +124,7 @@ export function googleSaveUrl(event, guest, extra = {}) {
   const issuer = config.googleWallet.issuerId;
   const d = passDetails(event, guest, extra);
   const classId = `${issuer}.event-${event.id}`;
+  const design = resolveDesign(event);
   const start = localToDate(event.starts_at, event.timezone);
   const end = localToDate(event.ends_at, event.timezone);
 
@@ -117,7 +139,8 @@ export function googleSaveUrl(event, guest, extra = {}) {
       address: { defaultValue: { language: 'en-US', value: event.venue_address || event.venue } },
     } }),
     ...(start && { dateTime: { start: start.toISOString(), ...(end && { end: end.toISOString() }) } }),
-    hexBackgroundColor: brand.primary,
+    hexBackgroundColor: design.background,
+    ...(design.cover_url && { heroImage: { sourceUri: { uri: `${config.publicUrl}${design.cover_url}` } } }),
   };
   const eventTicketObject = {
     id: `${issuer}.event-${event.id}-guest-${guest.id}`,

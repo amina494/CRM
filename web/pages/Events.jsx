@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../App.jsx';
 import { api } from '../api.js';
 import { Empty, Form, Loading, Modal, act, fmtTime, useApi } from '../components/ui.jsx';
@@ -47,6 +48,7 @@ export default function Events() {
             <div className="link-row">
               {event?.id === e.id ? <span className="badge tone-green">Current</span> : <button className="btn btn-ghost btn-sm" onClick={() => setEventId(e.id)}>Switch to this event</button>}
               {['admin', 'coordinator'].includes(e.my_role) && <button className="link small" onClick={() => setModal(e)}>Edit</button>}
+              {['admin', 'coordinator'].includes(e.my_role) && !e.anonymised_at && <Link className="link small" to={`/events/${e.id}/design`}>Invitation design</Link>}
               {['admin', 'coordinator'].includes(e.my_role) && !e.anonymised_at && <button className="link small" onClick={() => setRetention(e)}>Data retention</button>}
               {isAdmin && <button className="link small danger" onClick={() => act(async () => {
                 if (!window.confirm(`Delete “${e.name}” and its entire guest list? This cannot be undone.`)) return;
