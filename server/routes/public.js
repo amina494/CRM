@@ -12,7 +12,9 @@ import { eventIcs } from '../services/ics.js';
 import { inviteUrl } from '../services/invitations.js';
 import { setTransferStatus, badRequest, notFound } from '../services/tracking.js';
 import { todayIn, localToDate } from '../services/format.js';
-import { TRANSFER_LIST_SQL, transferPassengers } from './logistics.js';
+import { TRANSFER_LIST_SQL } from './logistics.js';
+import { newCheckinCode } from './guests.js';
+import { driverLinkExpiresAt } from '../services/driverLink.js';
 
 const r = Router();
 
@@ -89,9 +91,10 @@ r.post('/invite/:token/rsvp', (req, res) => {
       insert('guests', {
         event_id: event.id, first_name: first, last_name: rest.join(' ') || null, category: 'companion',
         party_lead_id: guest.id, relationship: 'Plus-one', language: guest.language, source: 'rsvp',
-        rsvp_status: 'attending', rsvp_at: nowIso(), invite_token: newToken(18), host_user_id: guest.host_user_id,
+        rsvp_status: 'attending', rsvp_at: nowIso(), invite_token: newToken(18), checkin_code: newCheckinCode(),
+        host_user_id: guest.host_user_id, backup_host_user_id: guest.backup_host_user_id,
       }, ['event_id', 'first_name', 'last_name', 'category', 'party_lead_id', 'relationship', 'language', 'source',
-        'rsvp_status', 'rsvp_at', 'invite_token', 'host_user_id']);
+        'rsvp_status', 'rsvp_at', 'invite_token', 'checkin_code', 'host_user_id', 'backup_host_user_id']);
     }
     for (const c of existing) if (!keep.has(c.id)) run('DELETE FROM guests WHERE id = ?', c.id);
     logActivity({ eventId: event.id, guestId: guest.id, actor: 'guest', action: `rsvp.${status}`,
@@ -138,14 +141,30 @@ r.get('/invite/:token/event.ics', (req, res) => {
 r.get('/invite/:token/qr.svg', async (req, res) => {
   const { guest } = loadInvite(req.params.token);
   res.setHeader('Content-Type', 'image/svg+xml');
-  res.send(await QRCode.toString(guest.invite_token, { type: 'svg', margin: 1, color: { dark: brand.primary } }));
+  res.send(await QRCode.toString(guest.checkin_code, { type: 'svg', margin: 1, color: { dark: brand.primary } }));
 });
 
 // --- Driver portal ----------------------------------------------------
+// Drivers see what they need to do the job and no more: passengers by title
+// and first name, and the host to call, never guests' own phone numbers.
 function loadDriver(token) {
-  const driver = get('SELECT * FROM drivers WHERE access_token = ?', token);
+  const driver = get('SELECT * FROM drivers WHERE access_token = ?', String(token));
   if (!driver) throw notFound('Link not valid');
+  if (driverLinkExpiresAt(driver) < new Date()) throw Object.assign(new Error('link expired'), { status: 410 });
   return driver;
+}
+
+const HOST_OF = `COALESCE(g.host_user_id, lead.host_user_id)`;
+
+function driverPassengers(transferId) {
+  return all(`SELECT g.id, g.title, g.first_name, g.current_status FROM transfer_passengers tp
+    JOIN guests g ON g.id = tp.guest_id WHERE tp.transfer_id = ? ORDER BY g.party_lead_id IS NOT NULL, g.first_name`, transferId);
+}
+
+function tripContacts(transferId) {
+  return all(`SELECT DISTINCT u.name, u.phone FROM transfer_passengers tp JOIN guests g ON g.id = tp.guest_id
+    LEFT JOIN guests lead ON lead.id = g.party_lead_id JOIN users u ON u.id = ${HOST_OF}
+    WHERE tp.transfer_id = ? AND u.active = 1 ORDER BY u.name`, transferId);
 }
 
 r.get('/driver/:token', (req, res) => {
@@ -155,12 +174,17 @@ r.get('/driver/:token', (req, res) => {
   const transfers = all(`${TRANSFER_LIST_SQL} WHERE t.driver_id = ? AND t.status != 'cancelled'
       AND (substr(t.scheduled_at, 1, 10) >= ? OR t.status IN ('en_route','picked_up'))
     ORDER BY t.scheduled_at LIMIT 50`, d.id, today);
-  const dedicated = all(`SELECT g.id, g.title, g.first_name, g.last_name, g.phone, g.current_status, g.current_location
-    FROM guests g WHERE g.driver_id = ? ORDER BY g.first_name`, d.id);
+  const dedicated = all(`SELECT g.id, g.title, g.first_name, g.current_status, g.current_location,
+      u.name AS host_name, u.phone AS host_phone
+    FROM guests g LEFT JOIN guests lead ON lead.id = g.party_lead_id LEFT JOIN users u ON u.id = ${HOST_OF}
+    WHERE g.driver_id = ? ORDER BY g.first_name`, d.id);
   res.json({
     driver: { name: d.name, status: d.status },
     today,
-    transfers: transfers.map((t) => ({ ...t, passengers: transferPassengers(t.id) })),
+    link_expires_at: driverLinkExpiresAt(d).toISOString(),
+    transfers: transfers.map(({ driver_phone: _p, driver_lat: _a, driver_lng: _b, ...t }) => ({
+      ...t, passengers: driverPassengers(t.id), contacts: tripContacts(t.id),
+    })),
     dedicated,
   });
 });
@@ -169,14 +193,15 @@ r.post('/driver/:token/transfers/:id/status', (req, res) => {
   const d = loadDriver(req.params.token);
   const t = get('SELECT * FROM transfers WHERE id = ? AND driver_id = ?', req.params.id, d.id);
   if (!t) throw notFound('Transfer not found');
-  res.json(setTransferStatus(t.id, req.body.status, `Driver ${d.name}`));
+  setTransferStatus(t.id, req.body.status, `Driver ${d.name}`);
+  res.json({ ok: true });
 });
 
 r.post('/driver/:token/location', (req, res) => {
   const d = loadDriver(req.params.token);
   const lat = Number(req.body.lat);
   const lng = Number(req.body.lng);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw badRequest('Invalid coordinates');
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) throw badRequest('Invalid coordinates');
   run('UPDATE drivers SET last_lat = ?, last_lng = ?, last_seen_at = ? WHERE id = ?', lat, lng, nowIso(), d.id);
   res.json({ ok: true });
 });

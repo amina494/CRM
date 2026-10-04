@@ -13,6 +13,9 @@ import { badRequest, notFound } from '../services/tracking.js';
 const r = Router();
 const MIN = 60 * 1000;
 const fullUser = (id) => get('SELECT * FROM users WHERE id = ?', id);
+// Compared against when no account matches, so a missing account takes as
+// long to reject as a wrong password and emails cannot be probed by timing.
+const DUMMY_HASH = hashPassword(newToken(12));
 
 r.get('/setup', (req, res) => {
   res.json({ needsSetup: !get('SELECT id FROM users LIMIT 1') });
@@ -48,7 +51,11 @@ r.post('/auth/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid email or password' });
   };
   const user = get('SELECT * FROM users WHERE email = ? AND active = 1', email);
-  if (!user || !checkPassword(password || '', user.password_hash)) return fail(user, 'wrong password');
+  if (!user) {
+    checkPassword(password || '', DUMMY_HASH);
+    return fail(null, 'unknown account');
+  }
+  if (!checkPassword(password || '', user.password_hash)) return fail(user, 'wrong password');
 
   if (user.totp_enabled) {
     if (!code) return res.status(401).json({ error: 'Enter the 6-digit code from your authenticator app', totp_required: true });
@@ -215,26 +222,41 @@ r.get('/events/:eventId/members', requireAuth, (req, res) => {
     WHERE u.active = 1 AND (m.event_id IS NOT NULL OR u.role = 'admin') ORDER BY u.name`, req.params.eventId));
 });
 
+// What a staff member can do is decided per event. Their account-wide role
+// is kept equal to the highest of their event roles; it is only used to
+// decide who must sign in with a one-time code.
+function syncAccountRole(userId) {
+  const u = fullUser(userId);
+  if (!u || u.role === 'admin') return;
+  const rows = all('SELECT role FROM event_members WHERE user_id = ?', userId).map((x) => x.role);
+  const role = ['coordinator', 'liaison', 'viewer'].find((x) => rows.includes(x)) || 'viewer';
+  if (role !== u.role) run('UPDATE users SET role = ? WHERE id = ?', role, userId);
+}
+
 function setMemberships(userId, memberships) {
-  if (!Array.isArray(memberships)) return;
-  run('DELETE FROM event_members WHERE user_id = ?', userId);
-  for (const m of memberships) {
-    if (!MEMBER_ROLES.includes(m.role)) throw badRequest('Unknown event role');
-    if (!get('SELECT id FROM events WHERE id = ?', m.event_id)) throw badRequest('Unknown event');
-    run('INSERT OR REPLACE INTO event_members (event_id, user_id, role) VALUES (?,?,?)', m.event_id, userId, m.role);
+  if (Array.isArray(memberships)) {
+    run('DELETE FROM event_members WHERE user_id = ?', userId);
+    for (const m of memberships) {
+      if (!MEMBER_ROLES.includes(m.role)) throw badRequest('Unknown event role');
+      if (!get('SELECT id FROM events WHERE id = ?', m.event_id)) throw badRequest('Unknown event');
+      run('INSERT OR REPLACE INTO event_members (event_id, user_id, role) VALUES (?,?,?)', m.event_id, userId, m.role);
+    }
   }
+  syncAccountRole(userId);
 }
 
 r.post('/users', requireAuth, requireAdmin, (req, res) => {
   const { password, memberships, ...data } = req.body;
   if (!password || password.length < 8) throw badRequest('Password must be at least 8 characters');
   if (data.email) data.email = String(data.email).trim().toLowerCase();
+  // An account is either an admin or staff; staff roles are set per event.
+  data.role = data.role === 'admin' ? 'admin' : 'viewer';
   const id = tx(() => {
     const uid = insert('users', { ...data, password_hash: hashPassword(password) }, [...USER_FIELDS, 'password_hash']);
     setMemberships(uid, memberships);
     return uid;
   });
-  logActivity({ action: 'user.created', details: `${data.name} (${data.role || 'coordinator'})`, req });
+  logActivity({ action: 'user.created', details: `${data.name} (${data.role === 'admin' ? 'admin' : 'staff'})`, req });
   res.status(201).json({ id });
 });
 
@@ -252,6 +274,7 @@ r.put('/users/:id', requireAuth, (req, res) => {
     throw badRequest('You cannot demote or deactivate your own account');
   }
   if (data.email) data.email = String(data.email).trim().toLowerCase();
+  if (data.role !== undefined) data.role = data.role === 'admin' ? 'admin' : (target.role === 'admin' ? 'viewer' : target.role);
   if (password) {
     if (password.length < 8) throw badRequest('Password must be at least 8 characters');
     // Changing your own password needs the current one, so an unattended
@@ -261,6 +284,7 @@ r.put('/users/:id', requireAuth, (req, res) => {
   tx(() => {
     update('users', id, data, fields);
     if (admin) setMemberships(id, memberships);
+    else syncAccountRole(id);
     if (password) run('UPDATE users SET password_hash = ?, session_epoch = session_epoch + 1 WHERE id = ?', hashPassword(password), id);
     // Deactivating or changing a role also signs the person out everywhere.
     else if (admin && (data.active === false || (data.role && data.role !== target.role))) {

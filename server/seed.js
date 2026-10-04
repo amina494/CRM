@@ -31,6 +31,8 @@ const admin = add('users', { name: 'Event Admin', email: 'admin@example.com', ro
 const sara = add('users', { name: 'Sara Al-Qahtani', email: 'sara@example.com', role: 'liaison', password_hash: hashPassword('liaison1234'), phone: '+966500000002' });
 const faisal = add('users', { name: 'Faisal Al-Harbi', email: 'faisal@example.com', role: 'liaison', password_hash: hashPassword('liaison1234'), phone: '+966500000003' });
 const noura = add('users', { name: 'Noura Al-Saud', email: 'noura@example.com', role: 'coordinator', password_hash: hashPassword('coord1234'), phone: '+966500000004' });
+const omar = add('users', { name: 'Omar Al-Rashed', email: 'viewer@example.com', role: 'viewer', password_hash: hashPassword('viewer1234'), phone: '+966500000005' });
+const huda = add('users', { name: 'Huda Al-Mansour', email: 'huda@example.com', role: 'coordinator', password_hash: hashPassword('coord1234'), phone: '+966500000006' });
 
 const event = add('events', {
   name: 'Annual Leadership Gala 2026', name_ar: 'الحفل السنوي للقيادات 2026',
@@ -62,16 +64,16 @@ const drivers = [
   ['Khalid Al-Shehri', '+966551110002', 'Arabic, English'],
   ['Omar Al-Zahrani', '+966551110003', 'Arabic, English, French'],
   ['Majed Al-Dossary', '+966551110004', 'Arabic'],
-].map(([name, phone, languages]) => add('drivers', { name, phone, languages, access_token: newToken(18) }));
+].map(([name, phone, languages]) => add('drivers', { name, phone, languages, access_token: newToken(18), token_issued_at: new Date().toISOString() }));
 
 // Guests
 function guest(data) {
-  return add('guests', { event_id: event, invite_token: newToken(18), ...data });
+  return add('guests', { event_id: event, invite_token: newToken(18), checkin_code: newToken(12), ...data });
 }
 const sent = { invite_status: 'sent', invited_at: new Date(Date.now() - 6 * 864e5).toISOString() };
 const attending = (n = 1) => ({ ...sent, invite_status: 'opened', opened_at: new Date(Date.now() - 5 * 864e5).toISOString(), rsvp_status: 'attending', rsvp_party_size: n, rsvp_at: new Date(Date.now() - 4 * 864e5).toISOString() });
 
-const minister = guest({ title: 'H.E.', first_name: 'Ahmed', last_name: 'Al-Rashid', name_ar: 'معالي أحمد الراشد', category: 'vvip', language: 'ar', organization: 'Ministry of Culture', position: 'Minister', nationality: 'Saudi', phone: '+966500100100', email: 'office.alrashid@example.com', plus_ones_allowed: 2, host_user_id: sara, table_id: tables['Head Table'], seat_number: '1', vehicle_id: vehicles[0], driver_id: drivers[0], ...attending(3) });
+const minister = guest({ title: 'H.E.', first_name: 'Ahmed', last_name: 'Al-Rashid', name_ar: 'معالي أحمد الراشد', category: 'vvip', language: 'ar', organization: 'Ministry of Culture', position: 'Minister', nationality: 'Saudi', phone: '+966500100100', email: 'office.alrashid@example.com', plus_ones_allowed: 2, host_user_id: sara, backup_host_user_id: faisal, table_id: tables['Head Table'], seat_number: '1', vehicle_id: vehicles[0], driver_id: drivers[0], ...attending(3) });
 const ministerAide = guest({ first_name: 'Yousef', last_name: 'Al-Qahtani', category: 'companion', party_lead_id: minister, relationship: 'Chief of Staff', language: 'ar', host_user_id: sara, table_id: tables['Table 1'], seat_number: '1', rsvp_status: 'attending' });
 const ministerSecurity = guest({ first_name: 'Turki', last_name: 'Al-Anazi', category: 'staff', party_lead_id: minister, relationship: 'Security', language: 'ar', host_user_id: sara, rsvp_status: 'attending' });
 
@@ -161,6 +163,34 @@ run("UPDATE transfers SET status = 'completed', started_at = ?, picked_up_at = ?
   new Date(Date.now() - 5 * 3600e3).toISOString(), new Date(Date.now() - 4.5 * 3600e3).toISOString(), new Date(Date.now() - 4 * 3600e3).toISOString(), delegationPickup);
 recordMovement(layla, { status: 'not_arrived', note: 'Local guest – driving herself', by: 'Noura Al-Saud' });
 
-console.log(`Seeded demo data for "Annual Leadership Gala 2026" (event ${event}).`);
-console.log('Sign in with admin@example.com / admin1234');
+// Who works on which event, and as what.
+for (const [user, role] of [[noura, 'coordinator'], [sara, 'liaison'], [faisal, 'liaison'], [omar, 'viewer']]) {
+  add('event_members', { event_id: event, user_id: user, role });
+}
+
+// A second event that only Huda (and admins) can see.
+const retreat = add('events', {
+  name: 'Board Retreat 2026', starts_at: day(30, '09:00'), ends_at: day(32, '17:00'), venue: 'AlUla', timezone: 'Asia/Riyadh',
+});
+add('event_members', { event_id: retreat, user_id: huda, role: 'coordinator' });
+for (const [first, last] of [['Khalid', 'Al-Faisal'], ['Mona', 'Al-Harbi']]) {
+  add('guests', { event_id: retreat, first_name: first, last_name: last, invite_token: newToken(18), checkin_code: newToken(12), host_user_id: huda });
+}
+
+// A past event whose guest data is due for removal (for the retention screen).
+const past = add('events', {
+  name: 'Spring Reception 2026', starts_at: day(-200, '19:00'), ends_at: day(-200, '23:00'), venue: 'Riyadh', timezone: 'Asia/Riyadh', retention_days: 90,
+});
+for (const [first, last] of [['Fahad', 'Al-Otaibi'], ['Rania', 'Haddad'], ['Peter', 'Lang']]) {
+  add('guests', { event_id: past, first_name: first, last_name: last, email: `${first.toLowerCase()}@example.com`, invite_token: newToken(18), checkin_code: newToken(12), rsvp_status: 'attending', checked_in_at: new Date(Date.now() - 200 * 864e5).toISOString() });
+}
+
+console.log(`Seeded demo data for "Annual Leadership Gala 2026" (event ${event}), plus "Board Retreat 2026" and a past "Spring Reception 2026".`);
+console.log('Sign in as:');
+console.log('  admin@example.com   / admin1234    admin (all events)');
+console.log('  noura@example.com   / coord1234    coordinator, Gala');
+console.log('  sara@example.com    / liaison1234  liaison, Gala (hosts the Minister\'s party)');
+console.log('  faisal@example.com  / liaison1234  liaison, Gala');
+console.log('  viewer@example.com  / viewer1234   viewer, Gala (read-only)');
+console.log('  huda@example.com    / coord1234    coordinator, Board Retreat only');
 void admin;

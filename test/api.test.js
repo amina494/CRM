@@ -150,21 +150,32 @@ test('flight landing and transfers update guest locations', async () => {
   assert.ok(detail.movements.length >= 3);
 });
 
-test('door check-in by invitation code', async () => {
-  const first = await call('POST', '/check-in', { token: `http://host/i/${leadToken}`, event_id: eventId });
+test('door check-in uses the entrance code, never the invitation link', async () => {
+  const code = get('SELECT checkin_code FROM guests WHERE id = ?', leadId).checkin_code;
+  assert.ok(code && code !== leadToken);
+  // The invitation link must not check anyone in.
+  assert.equal((await call('POST', '/check-in', { code: leadToken, event_id: eventId })).status, 404);
+  const first = await call('POST', '/check-in', { code, event_id: eventId });
   assert.equal(first.data.already, false);
   assert.equal(first.data.party.length, 1);
   assert.equal(get('SELECT current_status FROM guests WHERE id = ?', leadId).current_status, 'at_venue');
-  assert.equal((await call('POST', '/check-in', { token: leadToken })).data.already, true);
-  assert.equal((await call('POST', '/check-in', { token: 'bad' })).status, 404);
+  assert.equal((await call('POST', '/check-in', { code })).data.already, true);
+  assert.equal((await call('POST', '/check-in', { code: 'bad' })).status, 404);
 });
 
-test('viewers are read-only and only admins manage staff', async () => {
-  await call('POST', '/users', { name: 'Viewer', email: 'v@x.com', password: 'secret123', role: 'viewer' });
+test('viewers are read-only on their events and see nothing elsewhere', async () => {
+  await call('POST', '/users', { name: 'Viewer', email: 'v@x.com', password: 'secret123', memberships: [{ event_id: eventId, role: 'viewer' }] });
+  await call('POST', '/users', { name: 'Outsider', email: 'o@x.com', password: 'secret123', memberships: [] });
   const adminCookie = cookie;
   await call('POST', '/auth/login', { email: 'v@x.com', password: 'secret123' });
   assert.equal((await call('GET', `/events/${eventId}/guests`)).status, 200);
   assert.equal((await call('POST', `/events/${eventId}/guests`, { first_name: 'Nope' })).status, 403);
+  assert.equal((await call('PUT', `/guests/${leadId}`, { notes: 'x' })).status, 403);
+  assert.equal((await call('GET', `/events/${eventId}/dashboard`)).status, 200);
+  await call('POST', '/auth/login', { email: 'o@x.com', password: 'secret123' });
+  assert.equal((await call('GET', '/events')).data.length, 0);
+  assert.equal((await call('GET', `/events/${eventId}/guests`)).status, 404);
+  assert.equal((await call('POST', `/events/${eventId}/guests`, { first_name: 'Nope' })).status, 404);
   cookie = adminCookie;
   const dash = (await call('GET', `/events/${eventId}/dashboard`)).data;
   assert.equal(dash.totals.checked_in, 1);

@@ -11,13 +11,16 @@
 // person cannot use, but hiding is a convenience and never the protection.
 import { all, get } from './db.js';
 
-const RANK = { viewer: 1, liaison: 2, coordinator: 3, admin: 4 };
+export const RANK = { viewer: 1, liaison: 2, coordinator: 3, admin: 4 };
 
 export function forbidden(msg = 'You do not have access to this') {
   return Object.assign(new Error(msg), { status: 403 });
 }
-function notFound(msg = 'Not found') {
+export function notFound(msg = 'Not found') {
   return Object.assign(new Error(msg), { status: 404 });
+}
+function badRequest(msg) {
+  return Object.assign(new Error(msg), { status: 400 });
 }
 
 /** The user's role on one event: 'admin', a membership role, or null. */
@@ -92,11 +95,36 @@ export function loadGuest(user, guestId, mode = 'read') {
   return { guest, role };
 }
 
-/** Keeps only the ids that are guests of this event (stops cross-event links). */
+/**
+ * Checks that every id is a guest of this event and returns the cleaned list.
+ * Ids from another event (or that do not exist) are refused rather than
+ * silently dropped, so a wrong booking is noticed instead of half-saved.
+ * Passing something that is not an array returns it unchanged ("not sent").
+ */
 export function guestIdsInEvent(eventId, ids) {
   if (!Array.isArray(ids)) return ids;
-  const wanted = [...new Set(ids.map(Number).filter(Number.isInteger))];
+  const wanted = [...new Set(ids.map(Number))];
+  if (wanted.some((n) => !Number.isInteger(n))) throw badRequest('Unknown guest');
   if (!wanted.length) return [];
   const rows = all(`SELECT id FROM guests WHERE event_id = ? AND id IN (${wanted.map(() => '?').join(',')})`, eventId, ...wanted);
-  return rows.map((r) => r.id);
+  if (rows.length !== wanted.length) throw badRequest('Some of the selected guests are not on this event');
+  return wanted;
 }
+
+/** Refuses a link to a guest, table or host that belongs to another event. */
+export function assertLinksInEvent(eventId, { party_lead_id: lead, table_id: table, host_user_id: host, backup_host_user_id: backup } = {}) {
+  if (lead != null && lead !== '' && !get('SELECT 1 FROM guests WHERE id = ? AND event_id = ?', lead, eventId)) {
+    throw badRequest('The party lead is not on this event');
+  }
+  if (table != null && table !== '' && !get('SELECT 1 FROM seating_tables WHERE id = ? AND event_id = ?', table, eventId)) {
+    throw badRequest('That table belongs to another event');
+  }
+  for (const [label, uid] of [['host', host], ['backup host', backup]]) {
+    if (uid == null || uid === '') continue;
+    const ok = get(`SELECT 1 FROM users u WHERE u.id = ? AND u.active = 1 AND (u.role = 'admin'
+      OR EXISTS (SELECT 1 FROM event_members m WHERE m.user_id = u.id AND m.event_id = ? AND m.role IN ('coordinator','liaison')))`, uid, eventId);
+    if (!ok) throw badRequest(`The ${label} must be a coordinator or liaison on this event`);
+  }
+}
+
+export const atLeast = (role, min) => Boolean(role) && RANK[role] >= RANK[min];
