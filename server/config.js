@@ -24,7 +24,7 @@ export const config = {
   publicUrl: (env.PUBLIC_URL || `http://localhost:${env.PORT || 3000}`).replace(/\/$/, ''),
   dbPath: env.DATABASE_PATH || path.join(root, 'data', 'crm.db'),
   sessionSecret: env.SESSION_SECRET || 'dev-insecure-secret-change-me',
-  orgName: env.ORG_NAME || 'Guest Relations',
+  orgName: env.ORG_NAME || 'YAX',
 
   smtp: {
     host: env.SMTP_HOST,

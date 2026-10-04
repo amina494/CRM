@@ -9,7 +9,7 @@
   --brand: #1e1b1a;          /* sidebar, invitation backdrop, headings on invites (charcoal) */
   --brand-2: #2c2826;        /* hover / raised brand surfaces */
   --accent: #ef5f22;         /* YAX orange: highlights, active nav, focus, invite ornament */
-  --on-brand: #ffffff;       /* text on brand */
+  --on-brand: #f1ece9;       /* text on brand (YAX off-white) */
   --on-accent: #1e1b1a;      /* text on bright orange */
   --primary: #c9450f;        /* primary buttons: deeper orange so white text stays readable (4.8:1) */
   --primary-hover: #b23d0c;
@@ -103,13 +103,11 @@ textarea { resize: vertical; }
   width: 236px; flex-shrink: 0; background: var(--brand); color: var(--side-text);
   display: flex; flex-direction: column; padding: 18px 12px; position: sticky; top: 0; height: 100vh;
 }
-.brand { display: flex; align-items: center; gap: 10px; padding: 0 6px 16px; }
-.brand-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); display: inline-block; flex-shrink: 0; position: relative; }
-.brand-mark::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: var(--brand); }
-.brand-mark.large { width: 44px; height: 44px; border-radius: 12px; }
-.brand-mark.large::after { inset: 13px; background: var(--surface); }
-.brand-name { font-weight: 600; color: var(--on-brand); }
-.brand-sub { font-size: 12px; color: var(--side-muted); }
+.brand { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 4px 8px 18px; }
+.logo { display: inline-flex; align-items: center; line-height: 0; }
+.logo svg { height: 100%; width: auto; display: block; }
+.brand-logo { color: var(--accent); }
+.brand-sub { font-size: 11px; color: var(--side-muted); text-transform: uppercase; letter-spacing: 0.12em; }
 .event-select { background: var(--brand-2); color: var(--on-brand); border-color: var(--side-line); margin-bottom: 12px; }
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
 .nav-link { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; color: var(--side-text); text-decoration: none; }
@@ -319,7 +317,8 @@ textarea { resize: vertical; }
 .checkin-seat strong { font-size: 24px; }
 .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--brand); padding: 16px; }
 .login-card { background: var(--surface); padding: 32px; border-radius: 14px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; }
-.login-card h1 { margin-top: 6px; }
+.login-logo { color: var(--accent); align-self: flex-start; }
+.login-card h1 { margin-top: 10px; }
 .login-card p { margin: 0; }
 
 /* --- Responsive ------------------------------------------------------- */
@@ -361,7 +360,7 @@ textarea { resize: vertical; }
 .lang-toggle { position: absolute; top: 14px; inset-inline-end: 16px; background: transparent; color: var(--on-brand); border: 1px solid color-mix(in srgb, var(--on-brand) 45%, transparent); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
 .invite-card { background: var(--paper); max-width: 560px; width: 100%; border-radius: 4px; padding: 44px 36px 36px; text-align: center; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35); position: relative; border: 1px solid var(--accent-line); }
 .invite-card::before { content: ''; position: absolute; inset: 10px; border: 1px solid var(--accent-line); pointer-events: none; }
-.invite-ornament { width: 54px; height: 54px; border-radius: 50%; border: 6px solid var(--accent); margin: 0 auto 18px; }
+.invite-logo { color: var(--accent); margin: 0 auto 22px; }
 .invite-kicker { text-transform: uppercase; letter-spacing: 0.2em; font-size: 11px; font-weight: 500; color: var(--accent-ink); margin: 0 0 10px; }
 .invite-page[dir='rtl'] .invite-kicker { letter-spacing: 0; font-size: 13px; }
 .invite-guest { font-family: var(--font-display); font-size: 22px; margin: 0 0 8px; color: var(--brand); }
@@ -423,7 +422,7 @@ textarea { resize: vertical; }
   padding: 0 0 40px; font-family: var(--font);
 }
 .driver-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 18px 16px; background: var(--brand); color: var(--on-brand); position: sticky; top: 0; z-index: 2; border-bottom: 2px solid var(--accent); }
-.driver-hello { font-size: 18px; font-weight: 600; }
+.driver-hello { font-size: 18px; font-weight: 600; margin-top: 6px; }
 .driver-sub { font-size: 13px; color: var(--side-muted); }
 .driver-share { background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 8px 12px; font: inherit; font-size: 13px; }
 .driver-share.on { background: #1f7a4d; border-color: #1f7a4d; color: #fff; }

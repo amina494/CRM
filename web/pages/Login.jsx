@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import Logo from '../components/Logo.jsx';
 
 export default function Login({ onLogin }) {
   const [needsSetup, setNeedsSetup] = useState(false);
@@ -31,7 +32,7 @@ export default function Login({ onLogin }) {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={submit}>
-        <span className="brand-mark large" />
+        <Logo height={44} className="login-logo" />
         <h1>{needsSetup ? 'Create the admin account' : 'Sign in'}</h1>
         <p className="muted">{needsSetup ? 'This is a fresh install. The first account is the administrator.' : 'Guest management CRM'}</p>
         {needsSetup && (

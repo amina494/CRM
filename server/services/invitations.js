@@ -45,7 +45,8 @@ function htmlLayout(dir, lang, name, text, url, cta) {
   return `<!doctype html><html lang="${lang}" dir="${dir}"><body style="margin:0;background:${brand.background};font-family:${brand.font};color:${brand.primary}">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-top:6px solid ${brand.accent}">
-<tr><td style="padding:40px 40px 32px;text-align:${dir === 'rtl' ? 'right' : 'left'}">
+<tr><td style="padding:32px 40px 0;text-align:${dir === 'rtl' ? 'right' : 'left'}"><img src="${config.publicUrl}/yax-email-logo.png" width="120" height="42" alt="YAX" style="display:block;border:0;${dir === 'rtl' ? 'margin-left:auto' : ''}"></td></tr>
+<tr><td style="padding:24px 40px 32px;text-align:${dir === 'rtl' ? 'right' : 'left'}">
 <p style="margin:0 0 20px;font-size:20px">${escapeHtml(text.split('\n')[0])}</p>${paragraphs}
 <p style="margin:28px 0 0;text-align:center"><a href="${escapeHtml(url)}" style="background:${brand.primary};color:${brand.onPrimary};padding:14px 28px;text-decoration:none;display:inline-block;font-family:${brand.font};font-size:15px">${escapeHtml(cta)}</a></p>
 </td></tr></table></td></tr></table></body></html>`;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import Logo from '../components/Logo.jsx';
 
 const T = {
   en: {
@@ -69,7 +70,7 @@ export default function Invite() {
     <div className="invite-page" dir={ar ? 'rtl' : 'ltr'}>
       <button className="lang-toggle" onClick={() => setLang(ar ? 'en' : 'ar')}>{t.lang}</button>
       <article className="invite-card">
-        <div className="invite-ornament" aria-hidden />
+        <Logo height={30} className="invite-logo" />
         <p className="invite-kicker">{t.invited}</p>
         <p className="invite-guest">{t.dear} {name}</p>
         <p className="invite-host">{pick(e.host_name, e.host_name_ar) || data.org} {t.invites}</p>

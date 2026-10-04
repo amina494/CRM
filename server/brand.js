@@ -4,16 +4,13 @@ import './config.js'; // loads .env before reading BRAND_* below
 export const brand = {
   primary: process.env.BRAND_PRIMARY || '#1e1b1a',
   accent: process.env.BRAND_ACCENT || '#ef5f22',
-  onPrimary: '#ffffff',
+  onPrimary: '#f1ece9',
   background: '#e7e3e1',
   font: "'IBM Plex Sans', 'IBM Plex Sans Arabic', Arial, sans-serif",
 };
 
-/** "#1e1b1a" -> [30, 27, 26] */
-export function rgbArray(hex) {
-  const n = parseInt(hex.replace('#', ''), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
 /** "#1e1b1a" -> "rgb(30,27,26)" (Apple Wallet's colour format). */
-export const rgb = (hex) => `rgb(${rgbArray(hex).join(',')})`;
+export function rgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return `rgb(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255})`;
+}

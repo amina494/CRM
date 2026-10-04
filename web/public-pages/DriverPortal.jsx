@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import Logo from '../components/Logo.jsx';
 
 const KIND = { airport_pickup: 'Airport pickup', airport_dropoff: 'Airport drop-off', to_venue: 'To venue', from_venue: 'From venue', custom: 'Trip' };
 const STATUS = { scheduled: 'Scheduled', en_route: 'On the way', picked_up: 'Passengers on board', completed: 'Completed', cancelled: 'Cancelled' };
@@ -58,6 +59,7 @@ export default function DriverPortal() {
     <div className="driver-page">
       <header className="driver-head">
         <div>
+          <Logo height={16} className="brand-logo" />
           <div className="driver-hello">Hello, {data.driver.name}</div>
           <div className="driver-sub">{active.length} trip{active.length === 1 ? '' : 's'} to do</div>
         </div>

@@ -57,7 +57,7 @@ In production, set `NODE_ENV=production`, set a strong `SESSION_SECRET` and serv
 
 - **Times** are entered and shown in the event's local time (default `Asia/Riyadh`). Calendar files and wallet passes convert them correctly.
 - **Companions**: a plus-one named by the guest becomes a guest record linked to the lead. Staff can add aides, security or family the same way ("Add companion"), and each can have their own room, seat, flight and car.
-- **Branding**: YAX orange (`#ef5f22`) with charcoal, set at the top of `web/styles.css` (`--brand`, `--accent`) and in `server/brand.js` for emails and wallet passes. Fonts are IBM Plex Sans / Plex Sans Arabic / Plex Serif. The staff app follows the device's light or dark setting, with an Auto / Light / Dark switch in the sidebar.
+- **Branding**: the YAX wordmark is a vector traced from the official logo (`web/assets/yax-wordmark.svg`, drawn in the current text colour; app icon in `web/public/yax-icon.svg`; wallet pass and email PNGs in `server/assets/wallet/` and `web/public/`). Colours are YAX orange (`#ef5f22`) and off-white (`#f1ece9`) with charcoal, set at the top of `web/styles.css` (`--brand`, `--accent`) and in `server/brand.js` for emails and wallet passes. Fonts are IBM Plex Sans / Plex Sans Arabic / Plex Serif. The staff app follows the device's light or dark setting, with an Auto / Light / Dark switch in the sidebar.
 - **Privacy**: the public invitation page exposes only what the guest needs (no email, phone or internal notes). Invitation and driver links are random 144-bit tokens, and a driver link can be reset at any time.
 
 ## Project layout

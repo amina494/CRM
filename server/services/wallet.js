@@ -7,8 +7,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { PKPass, PassType } from 'passkit-generator';
 import { config } from '../config.js';
-import { brand, rgb, rgbArray } from '../brand.js';
-import { badgePng } from './png.js';
+import { brand, rgb } from '../brand.js';
 import { guestDisplayName, localToDate, formatEventDate } from './format.js';
 
 export class WalletNotConfigured extends Error {}
@@ -22,16 +21,14 @@ export function walletStatus() {
   };
 }
 
+// YAX icon and wordmark, rendered from web/public/yax-icon.svg and web/assets/yax-wordmark.svg.
+const ASSETS = new URL('../assets/wallet/', import.meta.url);
 let iconCache;
 function icons() {
-  const colors = [rgbArray(brand.primary), rgbArray(brand.accent)];
-  iconCache ??= {
-    'icon.png': badgePng(29, ...colors),
-    'icon@2x.png': badgePng(58, ...colors),
-    'icon@3x.png': badgePng(87, ...colors),
-    'logo.png': badgePng(50, ...colors),
-    'logo@2x.png': badgePng(100, ...colors),
-  };
+  iconCache ??= Object.fromEntries(
+    ['icon.png', 'icon@2x.png', 'icon@3x.png', 'logo.png', 'logo@2x.png', 'logo@3x.png']
+      .map((f) => [f, fs.readFileSync(new URL(f, ASSETS))]),
+  );
   return iconCache;
 }
 
@@ -68,7 +65,6 @@ export function applePass(event, guest, extra = {}) {
       serialNumber: `guest-${guest.id}-${guest.invite_token.slice(0, 8)}`,
       organizationName: config.orgName,
       description: d.eventName,
-      logoText: d.eventName,
       backgroundColor: rgb(brand.primary),
       foregroundColor: rgb(brand.onPrimary),
       labelColor: rgb(brand.accent),
@@ -77,7 +73,7 @@ export function applePass(event, guest, extra = {}) {
 
   const t = new PassType('eventTicket');
   t.primaryFields.push({ key: 'guest', label: 'GUEST', value: d.guestName });
-  t.secondaryFields.push({ key: 'when', label: 'DATE', value: d.when });
+  t.secondaryFields.push({ key: 'event', label: 'EVENT', value: d.eventName }, { key: 'when', label: 'DATE', value: d.when });
   if (d.venue) t.auxiliaryFields.push({ key: 'venue', label: 'VENUE', value: d.venue });
   if (d.table) t.auxiliaryFields.push({ key: 'table', label: 'TABLE', value: d.table });
   t.headerFields.push({ key: 'party', label: 'PARTY', value: String(d.partySize) });

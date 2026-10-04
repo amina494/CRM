@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api.js';
 import { Loading } from './components/ui.jsx';
+import Logo from './components/Logo.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Guests from './pages/Guests.jsx';
@@ -108,11 +109,8 @@ function StaffApp() {
       <div className="shell">
         <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
           <div className="brand">
-            <span className="brand-mark" />
-            <div>
-              <div className="brand-name">{meta?.org || 'Guest CRM'}</div>
-              <div className="brand-sub">Guest management</div>
-            </div>
+            <Logo height={26} className="brand-logo" />
+            <div className="brand-sub">Guest management</div>
           </div>
           {events.length > 0 && (
             <select className="event-select" value={event?.id || ''} onChange={(e) => setEventId(Number(e.target.value))}>
@@ -142,6 +140,7 @@ function StaffApp() {
         <div className="main">
           <header className="topbar">
             <button className="icon-btn menu-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="Menu">☰</button>
+            <Logo height={18} className="brand-logo" />
             <div className="topbar-title">{event?.name || 'No event yet'}</div>
           </header>
           <main className="content">
