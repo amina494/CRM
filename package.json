@@ -1,0 +1,35 @@
+{
+  "name": "guest-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Guest management CRM: invitations, RSVP, wallet passes, accommodation, seating, flights, fleet and live movement tracking.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "seed": "node --disable-warning=ExperimentalWarning server/seed.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "csv-parse": "^7.0.3",
+    "express": "^5.2.1",
+    "nodemailer": "^10.0.14",
+    "passkit-generator": "^3.6.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.4",
+    "vite": "^8.3.2"
+  }
+}
