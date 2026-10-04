@@ -14,7 +14,17 @@ import publicRoutes from './routes/public.js';
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  // Only believe the visitor address a proxy reports when we know a proxy is
+  // there (TRUST_PROXY=1 behind nginx/Caddy). Otherwise anyone could claim any
+  // address and slip past the sign-in limits.
+  app.set('trust proxy', config.trustProxy);
+  app.use((req, res, next) => {
+    res.setHeader('Referrer-Policy', 'no-referrer'); // invitation and driver links never leak to other sites
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY'); // the app cannot be embedded in another site
+    if (req.path.startsWith('/api')) res.setHeader('Cache-Control', 'no-store'); // guest data is never cached
+    next();
+  });
   app.use(express.json({ limit: '5mb' }));
 
   app.use('/api/public', publicRoutes);

@@ -62,7 +62,7 @@ export function applePass(event, guest, extra = {}) {
       formatVersion: 1,
       passTypeIdentifier: a.passTypeIdentifier,
       teamIdentifier: a.teamIdentifier,
-      serialNumber: `guest-${guest.id}-${guest.invite_token.slice(0, 8)}`,
+      serialNumber: `event-${event.id}-guest-${guest.id}`, // identifies the pass; not a secret
       organizationName: config.orgName,
       description: d.eventName,
       backgroundColor: rgb(brand.primary),
@@ -84,7 +84,8 @@ export function applePass(event, guest, extra = {}) {
   );
   pass.types.push(t);
 
-  pass.setBarcodes({ message: guest.invite_token, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' });
+  // The entrance code only checks the guest in; it cannot open the invitation.
+  pass.setBarcodes({ message: guest.checkin_code, format: 'PKBarcodeFormatQR', messageEncoding: 'iso-8859-1' });
   const start = localToDate(event.starts_at, event.timezone);
   if (start) pass.setRelevantDate(start);
   if (event.venue_lat != null && event.venue_lng != null) {
@@ -119,11 +120,11 @@ export function googleSaveUrl(event, guest, extra = {}) {
     hexBackgroundColor: brand.primary,
   };
   const eventTicketObject = {
-    id: `${issuer}.guest-${guest.id}-${guest.invite_token.slice(0, 8).replace(/[^\w.-]/g, '')}`,
+    id: `${issuer}.event-${event.id}-guest-${guest.id}`,
     classId,
     state: 'ACTIVE',
     ticketHolderName: d.guestName,
-    barcode: { type: 'QR_CODE', value: guest.invite_token },
+    barcode: { type: 'QR_CODE', value: guest.checkin_code },
     ...(d.table && { seatInfo: { seat: { defaultValue: { language: 'en-US', value: d.table } } } }),
     linksModuleData: extra.inviteUrl ? { uris: [{ uri: extra.inviteUrl, description: 'Invitation' }] } : undefined,
   };

@@ -49,7 +49,15 @@ export default function DriverPortal() {
     }
   }
 
-  if (error) return <div className="driver-page"><p className="driver-empty">This link is not valid. Please contact the operations desk.</p></div>;
+  if (error) {
+    return (
+      <div className="driver-page">
+        <p className="driver-empty">{error.status === 410
+          ? 'This trip sheet link has expired. Please ask the operations desk for your current link.'
+          : 'This link is not valid. Please contact the operations desk.'}</p>
+      </div>
+    );
+  }
   if (!data) return <div className="driver-page"><p className="driver-empty">Loading…</p></div>;
 
   const active = data.transfers.filter((t) => t.status !== 'completed');
@@ -61,7 +69,7 @@ export default function DriverPortal() {
         <div>
           <Logo height={16} className="brand-logo" />
           <div className="driver-hello">Hello, {data.driver.name}</div>
-          <div className="driver-sub">{active.length} trip{active.length === 1 ? '' : 's'} to do</div>
+          <div className="driver-sub">{active.length} trip{active.length === 1 ? '' : 's'} to do · link valid until {new Date(data.link_expires_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
         </div>
         <button className={`driver-share ${sharing ? 'on' : ''}`} onClick={() => setSharing((s) => !s)}>
           {sharing ? '● Sharing location' : 'Share my location'}
@@ -89,12 +97,17 @@ export default function DriverPortal() {
           </div>
           <div className="driver-pax">
             {t.passengers.map((p) => (
-              <div key={p.id}>
-                <strong>{[p.title, p.first_name, p.last_name].filter(Boolean).join(' ')}</strong>
-                {p.phone && <a href={`tel:${p.phone}`}>Call</a>}
-              </div>
+              <div key={p.id}><strong>{[p.title, p.first_name].filter(Boolean).join(' ')}</strong></div>
             ))}
           </div>
+          {t.contacts.length > 0 && (
+            <div className="driver-contacts">
+              <span>Host to contact</span>
+              {t.contacts.map((c) => (
+                <div key={c.name}>{c.name} {c.phone && <a href={`tel:${c.phone}`}>Call</a>}</div>
+              ))}
+            </div>
+          )}
           {t.vehicle_plate && <div className="driver-car">Car: {t.vehicle_plate} {t.vehicle_label}</div>}
           {t.notes && <div className="driver-notes">{t.notes}</div>}
           {NEXT[t.status] && (
@@ -119,9 +132,9 @@ export default function DriverPortal() {
           <h2 className="driver-section">Your guests</h2>
           {data.dedicated.map((g) => (
             <div key={g.id} className="driver-done">
-              <strong>{[g.title, g.first_name, g.last_name].filter(Boolean).join(' ')}</strong>
+              <strong>{[g.title, g.first_name].filter(Boolean).join(' ')}</strong>
               {g.current_location && ` · ${g.current_location}`}
-              {g.phone && <> · <a href={`tel:${g.phone}`}>Call</a></>}
+              {g.host_name && <> · host {g.host_name}{g.host_phone && <> <a href={`tel:${g.host_phone}`}>Call</a></>}</>}
             </div>
           ))}
         </>

@@ -25,6 +25,11 @@ export const config = {
   dbPath: env.DATABASE_PATH || path.join(root, 'data', 'crm.db'),
   sessionSecret: env.SESSION_SECRET || 'dev-insecure-secret-change-me',
   orgName: env.ORG_NAME || 'YAX',
+  // One-time sign-in codes for admins and coordinators. On by default in production.
+  require2fa: env.REQUIRE_2FA ? env.REQUIRE_2FA === 'true' : env.NODE_ENV === 'production',
+  // Number of reverse proxies in front of the app (nginx, Caddy…). Leave at 0
+  // when the app is reached directly, otherwise the visitor's address can be faked.
+  trustProxy: Number(env.TRUST_PROXY || 0),
 
   smtp: {
     host: env.SMTP_HOST,

@@ -16,6 +16,9 @@ import CheckIn from './pages/CheckIn.jsx';
 import Messages from './pages/Messages.jsx';
 import Staff from './pages/Staff.jsx';
 import Events from './pages/Events.jsx';
+import Audit from './pages/Audit.jsx';
+import Security from './pages/Security.jsx';
+import ResetPassword from './public-pages/ResetPassword.jsx';
 import Invite from './public-pages/Invite.jsx';
 import DriverPortal from './public-pages/DriverPortal.jsx';
 
@@ -27,24 +30,47 @@ export default function App() {
     <Routes>
       <Route path="/i/:token" element={<Invite />} />
       <Route path="/d/:token" element={<DriverPortal />} />
+      <Route path="/reset/:token" element={<ResetPassword />} />
       <Route path="/*" element={<StaffApp />} />
     </Routes>
   );
 }
 
+// [path, label, icon, who sees it]. The server enforces every rule; hiding
+// menu items only keeps the screen tidy.
 const NAV = [
-  ['/', 'Dashboard', '◧'],
-  ['/guests', 'Guests & RSVP', '☰'],
-  ['/transfers', 'Movements', '➜'],
-  ['/flights', 'Flights', '✈'],
-  ['/accommodation', 'Accommodation', '⌂'],
-  ['/seating', 'Seating', '◎'],
-  ['/fleet', 'Cars & drivers', '⛟'],
-  ['/check-in', 'Check-in', '✓'],
-  ['/messages', 'Outbox', '✉'],
-  ['/staff', 'Staff', '☺'],
-  ['/events', 'Events', '★'],
+  ['/', 'Dashboard', '◧', (c) => c.overview],
+  ['/guests', 'Guests & RSVP', '☰', () => true],
+  ['/transfers', 'Movements', '➜', () => true],
+  ['/flights', 'Flights', '✈', () => true],
+  ['/accommodation', 'Accommodation', '⌂', () => true],
+  ['/seating', 'Seating', '◎', (c) => c.overview],
+  ['/fleet', 'Cars & drivers', '⛟', () => true],
+  ['/check-in', 'Check-in', '✓', (c) => c.handle],
+  ['/messages', 'Outbox', '✉', (c) => c.overview],
+  ['/staff', 'Staff', '☺', () => true],
+  ['/events', 'Events', '★', () => true],
+  ['/audit', 'Audit trail', '⌕', (c) => c.admin],
 ];
+
+const RANK = { viewer: 1, liaison: 2, coordinator: 3, admin: 4 };
+
+/** What the signed-in person may do on the selected event. */
+function permissions(me, event) {
+  const role = event?.my_role || (me?.role === 'admin' ? 'admin' : null);
+  const at = (min) => Boolean(role) && RANK[role] >= RANK[min];
+  return {
+    role,
+    admin: me?.role === 'admin',
+    manage: at('coordinator'), // add guests, logistics, seating
+    handle: at('liaison'), // edit own guests, record movements, check in
+    liaison: role === 'liaison',
+    overview: Boolean(role) && role !== 'liaison', // dashboard, seating, outbox
+    fleet: me?.role === 'admin' || Boolean(me?.memberships?.some((m) => m.role === 'coordinator')),
+  };
+}
+
+const ROLE_LABEL = { admin: 'Admin', coordinator: 'Coordinator', liaison: 'Liaison / host', viewer: 'Viewer' };
 
 function StaffApp() {
   const [me, setMe] = useState(undefined);
@@ -67,12 +93,11 @@ function StaffApp() {
     return list;
   };
 
-  useEffect(() => {
-    api.get('/auth/me').then(setMe).catch(() => setMe(null));
-  }, []);
+  const loadMe = () => api.get('/auth/me').then(setMe).catch(() => setMe(null));
+  useEffect(() => { loadMe(); }, []);
 
   useEffect(() => {
-    if (!me) return;
+    if (!me || me.totp_setup_required) return;
     api.get('/meta').then(setMeta).catch(() => {});
     loadEvents();
   }, [me]);
@@ -86,16 +111,31 @@ function StaffApp() {
 
   const event = useMemo(() => {
     if (!events?.length) return null;
-    return events.find((e) => e.id === eventId) || events[0];
+    const chosen = events.find((e) => e.id === eventId);
+    if (chosen) return chosen;
+    // Default to the next event coming up (or the most recent past one).
+    const now = new Date().toISOString().slice(0, 16);
+    const upcoming = events.filter((e) => (e.ends_at || e.starts_at || '') >= now)
+      .sort((a, b) => (a.starts_at || '').localeCompare(b.starts_at || ''));
+    return upcoming[0] || events[0];
   }, [events, eventId]);
 
+  const can = useMemo(() => permissions(me, event), [me, event]);
   const ctx = useMemo(() => ({
-    me, meta, event, events, setEventId, reloadEvents: loadEvents,
-    canEdit: me?.role !== 'viewer', isAdmin: me?.role === 'admin',
-  }), [me, meta, event, events]);
+    me, meta, event, events, setEventId, reloadEvents: loadEvents, reloadMe: loadMe, can,
+    canEdit: can.manage, isAdmin: can.admin,
+  }), [me, meta, event, events, can]);
 
   if (me === undefined) return <Loading />;
-  if (!me) return <Login onLogin={setMe} />;
+  if (!me) return <Login onLogin={loadMe} />;
+  // Roles that must use a one-time code set it up before anything else.
+  if (me.totp_setup_required) {
+    return (
+      <Ctx.Provider value={ctx}>
+        <div className="setup-gate"><Security forced onDone={loadMe} /></div>
+      </Ctx.Provider>
+    );
+  }
   if (!events) return <Loading />;
 
   const logout = async () => {
@@ -118,7 +158,7 @@ function StaffApp() {
             </select>
           )}
           <nav>
-            {NAV.map(([to, label, icon]) => (
+            {NAV.filter((n) => n[3](can)).map(([to, label, icon]) => (
               <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 <span className="nav-icon" aria-hidden>{icon}</span>{label}
               </NavLink>
@@ -132,7 +172,8 @@ function StaffApp() {
           <div className="sidebar-foot">
             <div className="me">
               <div className="me-name">{me.name}</div>
-              <div className="me-role">{me.role}</div>
+              <div className="me-role">{ROLE_LABEL[can.role] || 'No access to this event'}</div>
+              <NavLink to="/security" className="me-link">Sign-in security</NavLink>
             </div>
             <button className="btn btn-ghost btn-sm on-dark" onClick={logout}>Sign out</button>
           </div>
@@ -144,11 +185,11 @@ function StaffApp() {
             <div className="topbar-title">{event?.name || 'No event yet'}</div>
           </header>
           <main className="content">
-            {!event && location.pathname !== '/events' && location.pathname !== '/staff' ? (
+            {!event && !['/events', '/staff', '/security', '/audit'].includes(location.pathname) ? (
               <Navigate to="/events" replace />
             ) : (
               <Routes>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/" element={can.overview ? <Dashboard /> : <Navigate to="/guests" replace />} />
                 <Route path="/guests" element={<Guests />} />
                 <Route path="/guests/:id" element={<GuestDetail />} />
                 <Route path="/transfers" element={<Transfers />} />
@@ -160,6 +201,8 @@ function StaffApp() {
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/staff" element={<Staff />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/security" element={<Security />} />
+                <Route path="/audit" element={can.admin ? <Audit /> : <Navigate to="/" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             )}

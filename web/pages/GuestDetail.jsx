@@ -11,7 +11,8 @@ import { SendInvitationsModal } from './Guests.jsx';
 
 export default function GuestDetail() {
   const { id } = useParams();
-  const { canEdit } = useApp();
+  const { can } = useApp();
+  const canEdit = can.manage;
   const navigate = useNavigate();
   const { data: g, error, reload } = useApi(`/guests/${id}`);
   const [modal, setModal] = useState(null);
@@ -44,10 +45,10 @@ export default function GuestDetail() {
           </div>
           <p className="muted">{[g.position, g.organization, g.nationality].filter(Boolean).join(' · ')}</p>
         </div>
-        {canEdit && (
+        {can.handle && (
           <div className="actions">
             <button className="btn btn-ghost" onClick={() => setModal('edit')}>Edit</button>
-            <button className="btn btn-ghost" onClick={() => setModal('send')}>Send invitation</button>
+            {canEdit && <button className="btn btn-ghost" onClick={() => setModal('send')}>Send invitation</button>}
             {!g.checked_in_at && <button className="btn btn-ghost" onClick={checkIn}>Check in</button>}
             <button className="btn btn-primary" onClick={() => setModal('status')}>Update location</button>
           </div>
@@ -63,6 +64,7 @@ export default function GuestDetail() {
             <dt>Language</dt><dd>{g.language === 'ar' ? 'Arabic' : 'English'}</dd>
             <dt>Dietary</dt><dd>{g.dietary || '—'}</dd>
             <dt>Host</dt><dd><strong>{g.host_name || <span className="warn">Unassigned</span>}</strong></dd>
+            <dt>Backup host</dt><dd>{g.backup_host_name || '—'}</dd>
           </dl>
           {g.notes && <div className="note">{g.notes}</div>}
         </section>
@@ -76,11 +78,13 @@ export default function GuestDetail() {
             <dt>Party size</dt><dd>{g.rsvp_party_size ?? '—'} <span className="muted small">(+{g.plus_ones_allowed} allowed)</span></dd>
             {g.rsvp_message && <><dt>Message</dt><dd>“{g.rsvp_message}”</dd></>}
           </dl>
+          {g.invite_url && (
           <div className="link-row">
-            <a className="btn btn-ghost btn-sm" href={g.invite_url} target="_blank" rel="noreferrer">Open invitation</a>
-            <button className="btn btn-ghost btn-sm" onClick={copyLink}>Copy link</button>
-            <button className="btn btn-ghost btn-sm" onClick={() => setModal('preview')}>Preview message</button>
-          </div>
+              <a className="btn btn-ghost btn-sm" href={g.invite_url} target="_blank" rel="noreferrer">Open invitation</a>
+              <button className="btn btn-ghost btn-sm" onClick={copyLink}>Copy link</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setModal('preview')}>Preview message</button>
+            </div>
+          )}
         </section>
 
         <section className="card">
@@ -230,7 +234,7 @@ export default function GuestDetail() {
               ))}
             </ul>
           )}
-          {canEdit && <button className="link small danger mt" onClick={remove}>Delete guest</button>}
+          {can.admin && <button className="link small danger mt" onClick={remove}>Delete guest</button>}
         </section>
       </div>
 

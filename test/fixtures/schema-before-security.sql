@@ -246,34 +246,3 @@ CREATE TABLE IF NOT EXISTS activity_log (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_activity_event ON activity_log(event_id, created_at);
-
--- ---------------------------------------------------------------------
--- Security additions. New COLUMNS on the tables above are added by
--- migrate() in db.js so that existing databases are upgraded in place.
--- ---------------------------------------------------------------------
-
--- Which staff may work on which event, and in what capacity. Admins see
--- every event and need no rows here.
-CREATE TABLE IF NOT EXISTS event_members (
-  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role     TEXT NOT NULL DEFAULT 'liaison' CHECK (role IN ('coordinator','liaison','viewer')),
-  PRIMARY KEY (event_id, user_id)
-);
-CREATE INDEX IF NOT EXISTS idx_event_members_user ON event_members(user_id);
-
--- Failed sign-in and password-reset attempts, kept in the database so the
--- throttle survives a restart.
-CREATE TABLE IF NOT EXISTS auth_attempts (
-  key TEXT NOT NULL,
-  at  INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_auth_attempts ON auth_attempts(key, at);
-
--- One-time password reset links. Only a hash of the token is stored.
-CREATE TABLE IF NOT EXISTS password_resets (
-  token_hash TEXT PRIMARY KEY,
-  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  expires_at INTEGER NOT NULL,
-  used_at    INTEGER
-);
