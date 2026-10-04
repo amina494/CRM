@@ -16,7 +16,7 @@ export default function Guests() {
   const filters = Object.fromEntries(['q', 'rsvp', 'category', 'status', 'host', 'invite'].map((k) => [k, params.get(k) || '']));
   const query = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
   const { data: guests, error, reload } = useApi(`/events/${event.id}/guests${query ? `?${query}` : ''}`);
-  const users = useApi('/users').data || [];
+  const users = useApi(`/events/${event.id}/members`).data?.filter((m) => m.role !== 'viewer') || [];
 
   const setFilter = (k, v) => {
     const next = new URLSearchParams(params);
@@ -40,7 +40,7 @@ export default function Guests() {
           <p className="muted">{guests ? `${guests.length} guests` : ''}</p>
         </div>
         <div className="actions">
-          <a className="btn btn-ghost" href={`/api/events/${event.id}/guests/export.csv`}>Export CSV</a>
+          {canEdit && <a className="btn btn-ghost" href={`/api/events/${event.id}/guests/export.csv`}>Export CSV</a>}
           {canEdit && <button className="btn btn-ghost" onClick={() => setModal('import')}>Import CSV</button>}
           {canEdit && <button className="btn btn-primary" onClick={() => setModal('add')}>Add guest</button>}
         </div>
@@ -71,7 +71,7 @@ export default function Guests() {
           <table className="table">
             <thead>
               <tr>
-                <th className="check"><input type="checkbox" checked={selected.size === allIds.length} onChange={toggleAll} aria-label="Select all" /></th>
+                {canEdit && <th className="check"><input type="checkbox" checked={selected.size === allIds.length} onChange={toggleAll} aria-label="Select all" /></th>}
                 <th>Guest</th>
                 <th>Category</th>
                 <th>Invitation</th>
@@ -87,9 +87,11 @@ export default function Guests() {
             <tbody>
               {guests.map((g) => (
                 <tr key={g.id} className={g.party_lead_id ? 'companion-row' : ''} onClick={() => navigate(`/guests/${g.id}`)}>
-                  <td className="check" onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={selected.has(g.id)} onChange={() => toggle(g.id)} aria-label={`Select ${guestName(g)}`} />
-                  </td>
+                  {canEdit && (
+                    <td className="check" onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" checked={selected.has(g.id)} onChange={() => toggle(g.id)} aria-label={`Select ${guestName(g)}`} />
+                    </td>
+                  )}
                   <td>
                     <Link to={`/guests/${g.id}`} className="guest-link" onClick={(e) => e.stopPropagation()}>
                       {g.party_lead_id ? '↳ ' : ''}{guestName(g)}

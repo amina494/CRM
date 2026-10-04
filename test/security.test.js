@@ -131,6 +131,11 @@ test('a liaison only sees and edits the guests they look after', async () => {
   assert.equal((await l.call('PUT', `/transfers/${ids.tripA}`, { notes: 'x' })).status, 403);
   assert.equal((await l.call('POST', `/transfers/${ids.tripA}/status`, { status: 'en_route' })).status, 200);
 
+  // Lists never carry the invitation token or the entrance code.
+  const listed = (await l.call('GET', `/events/${ids.eventA}/guests`)).data;
+  assert.ok(listed.every((g) => !('invite_token' in g) && !('checkin_code' in g)));
+  assert.ok((await l.call('GET', `/guests/${ids.hosted}`)).data.invite_url, 'a liaison can open their guest\'s invitation');
+
   // Driver links are only for people who manage the fleet.
   const drivers = (await l.call('GET', '/drivers')).data;
   assert.ok(drivers.every((d) => !d.portal_url && !d.access_token));
@@ -254,6 +259,20 @@ test('profile views, exports, deletions and check-ins are in the audit trail', a
   assert.ok(has('guest.deleted'));
   assert.ok(has('guest.checked_in'));
   assert.equal((await a.call('GET', '/audit')).status, 403);
+});
+
+test('viewers can read guests but never get a link that acts as the guest', async () => {
+  await admin.call('POST', '/users', { name: 'View A', email: 'viewa@x.com', password: 'secret123', memberships: [{ event_id: ids.eventA, role: 'viewer' }] });
+  await admin.call('POST', `/events/${ids.eventA}/invitations/send`, { guest_ids: [ids.other], channels: ['email', 'sms'] });
+  const v = client();
+  await v.login('viewa@x.com');
+  const profile = (await v.call('GET', `/guests/${ids.other}`)).data;
+  assert.equal(profile.invite_url, null);
+  assert.ok(!('invite_token' in profile) && !('checkin_code' in profile));
+  const token = get('SELECT invite_token FROM guests WHERE id = ?', ids.other).invite_token;
+  const outbox = JSON.stringify((await v.call('GET', `/events/${ids.eventA}/messages`)).data);
+  assert.ok(outbox.includes('[invitation link]') && !outbox.includes(token));
+  assert.ok(!JSON.stringify(profile.messages).includes(token));
 });
 
 test('guest data can be anonymised only by an admin, only when due, with the event name typed', async () => {

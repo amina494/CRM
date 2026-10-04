@@ -5,9 +5,13 @@ import { Form, guestName, toOptions, useApi } from './ui.jsx';
 
 /** Create or edit a guest, including host, seating and dedicated car/driver. */
 export default function GuestForm({ guest, onSaved, onCancel, defaultLead }) {
-  const { event } = useApp();
-  const users = useApi('/users').data;
-  const tables = useApi(`/events/${event.id}/tables`).data;
+  const { event, can } = useApp();
+  // Only coordinators and liaisons on this event can host a guest.
+  const members = useApi(`/events/${event.id}/members`).data;
+  const users = members?.filter((m) => m.role !== 'viewer');
+  // Liaisons do not see the seating plan, so they get no table picker.
+  const tablesApi = useApi(can.overview ? `/events/${event.id}/tables` : null);
+  const tables = can.overview ? tablesApi.data : [];
   const vehicles = useApi('/vehicles').data;
   const drivers = useApi('/drivers').data;
   const guests = useApi(`/events/${event.id}/guests`).data;
@@ -15,6 +19,9 @@ export default function GuestForm({ guest, onSaved, onCancel, defaultLead }) {
   if (!users || !tables || !vehicles || !drivers || !guests) return <div className="loading">Loading…</div>;
 
   const leads = guests.filter((g) => !g.party_lead_id && g.id !== guest?.id);
+  // Who looks after a guest is set by coordinators; liaisons see it but cannot change it.
+  const locked = can.liaison;
+  const lockedHint = locked ? 'Set by a coordinator' : undefined;
   const initial = guest
     ? { ...guest }
     : { category: defaultLead ? 'companion' : 'general', language: 'en', plus_ones_allowed: 0, rsvp_status: 'pending', party_lead_id: defaultLead || '' };
@@ -32,12 +39,13 @@ export default function GuestForm({ guest, onSaved, onCancel, defaultLead }) {
     { name: 'category', label: 'Category', type: 'select', options: CATEGORIES, required: true },
     { name: 'language', label: 'Invitation language', type: 'select', options: { en: 'English', ar: 'العربية' }, required: true },
     { name: 'plus_ones_allowed', label: 'Plus-ones allowed', type: 'number' },
-    { name: 'party_lead_id', label: 'Accompanying (party lead)', type: 'select', options: toOptions(leads, guestName), empty: '— Principal guest —' },
+    { name: 'party_lead_id', label: 'Accompanying (party lead)', type: 'select', options: toOptions(leads, guestName), empty: '— Principal guest —', disabled: locked, hint: lockedHint },
     { name: 'relationship', label: 'Relationship to lead', placeholder: 'Spouse, aide, security…' },
-    { name: 'host_user_id', label: 'Assigned host / liaison', type: 'select', options: toOptions(users.filter((u) => u.active)), empty: '— Unassigned —' },
+    { name: 'host_user_id', label: 'Assigned host / liaison', type: 'select', options: toOptions(users), empty: '— Unassigned —', disabled: locked, hint: lockedHint },
+    { name: 'backup_host_user_id', label: 'Backup host', type: 'select', options: toOptions(users), empty: '— None —', disabled: locked, hint: locked ? '' : 'Covers when the host is away; sees this guest too' },
     { name: 'rsvp_status', label: 'RSVP', type: 'select', options: RSVP, required: true },
-    { name: 'table_id', label: 'Table', type: 'select', options: toOptions(tables, (t) => `${t.name}${t.zone ? ` (${t.zone})` : ''}`) },
-    { name: 'seat_number', label: 'Seat' },
+    can.overview && { name: 'table_id', label: 'Table', type: 'select', options: toOptions(tables, (t) => `${t.name}${t.zone ? ` (${t.zone})` : ''}`) },
+    can.overview && { name: 'seat_number', label: 'Seat' },
     { name: 'vehicle_id', label: 'Dedicated car', type: 'select', options: toOptions(vehicles, (v) => `${v.plate} · ${v.make || ''} ${v.model || ''}`) },
     { name: 'driver_id', label: 'Dedicated driver', type: 'select', options: toOptions(drivers) },
     { name: 'dietary', label: 'Dietary / accessibility', span: 2 },

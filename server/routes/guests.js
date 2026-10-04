@@ -46,10 +46,15 @@ const GUEST_LIST_SQL = `
   LEFT JOIN drivers d ON d.id = g.driver_id
   LEFT JOIN guests lead ON lead.id = g.party_lead_id`;
 
+// The invitation token and entrance code are secrets: they are never sent in
+// lists, and the invitation link is only given to people who may act on it.
+export const maskLinks = (text) => (text ? text.replace(/https?:\/\/\S+\/i\/[\w-]+/g, '[invitation link]') : text);
+
 function splitArrival(row) {
-  if (!row.arrival) return { ...row, arrival: null };
-  const [service_type, flight, at] = row.arrival.split('|');
-  return { ...row, arrival: { service_type, flight, at } };
+  const { invite_token: _t, checkin_code: _c, ...safe } = row;
+  if (!safe.arrival) return { ...safe, arrival: null };
+  const [service_type, flight, at] = safe.arrival.split('|');
+  return { ...safe, arrival: { service_type, flight, at } };
 }
 
 r.get('/events/:eventId/guests', eventAccess('viewer'), (req, res) => {
@@ -152,13 +157,15 @@ r.get('/events/:eventId/guests/export.csv', eventAccess('coordinator'), (req, re
 // Full guest profile with everything staff need on one screen.
 r.get('/guests/:id', (req, res) => {
   const { role } = loadGuest(req.user, req.params.id, 'read');
-  const guest = splitArrival(get(`${GUEST_LIST_SQL} WHERE g.id = ?`, req.params.id));
+  const raw = get(`${GUEST_LIST_SQL} WHERE g.id = ?`, req.params.id);
+  const guest = splitArrival(raw);
+  const viewer = role === 'viewer';
   logActivity({ eventId: guest.event_id, guestId: guest.id, action: 'guest.viewed', req });
   const leadId = guest.party_lead_id || guest.id;
   res.json({
     ...guest,
     my_role: role,
-    invite_url: inviteUrl(guest),
+    invite_url: viewer ? null : inviteUrl(raw),
     party: all(`SELECT id, title, first_name, last_name, relationship, category, rsvp_status, current_status, party_lead_id
       FROM guests WHERE (id = ? OR party_lead_id = ?) AND id != ? ORDER BY party_lead_id IS NOT NULL, first_name`,
       leadId, leadId, guest.id),
@@ -176,7 +183,8 @@ r.get('/guests/:id', (req, res) => {
       LEFT JOIN drivers d ON d.id = t.driver_id LEFT JOIN vehicles v ON v.id = t.vehicle_id
       WHERE tp.guest_id = ? ORDER BY t.scheduled_at`, guest.id),
     movements: all('SELECT * FROM movements WHERE guest_id = ? ORDER BY recorded_at DESC LIMIT 100', guest.id),
-    messages: all('SELECT * FROM messages WHERE guest_id = ? ORDER BY sent_at DESC LIMIT 50', guest.id),
+    messages: all('SELECT * FROM messages WHERE guest_id = ? ORDER BY sent_at DESC LIMIT 50', guest.id)
+      .map((m) => (viewer ? { ...m, body: maskLinks(m.body) } : m)),
     activity: all('SELECT * FROM activity_log WHERE guest_id = ? ORDER BY created_at DESC LIMIT 50', guest.id),
   });
 });

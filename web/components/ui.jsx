@@ -111,7 +111,7 @@ export function Form({ initial = {}, fields, onSubmit, submitLabel = 'Save', onC
 }
 
 function Input({ field: f, value, onChange }) {
-  const common = { value: value ?? '', required: f.required, placeholder: f.placeholder, dir: f.dir };
+  const common = { value: value ?? '', required: f.required, placeholder: f.placeholder, dir: f.dir, disabled: f.disabled };
   switch (f.type) {
     case 'select':
       return (

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useApp } from '../App.jsx';
 import { api } from '../api.js';
 import { Badge, Empty, Form, Loading, Modal, act, fmtAgo, useApi } from '../components/ui.jsx';
+
+const fmtDateTime = (iso) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 import { DRIVER_STATUS, VEHICLE_STATUS, VEHICLE_TYPES } from '../constants.js';
 
 const VEHICLE_FIELDS = [
@@ -24,7 +26,8 @@ const DRIVER_FIELDS = [
 ];
 
 export default function Fleet() {
-  const { canEdit } = useApp();
+  const { can } = useApp();
+  const canEdit = can.fleet; // hotels, cars and drivers are shared, so any coordinator can manage them
   const vehicles = useApi('/vehicles');
   const drivers = useApi('/drivers', { poll: 30000 });
   const [modal, setModal] = useState(null);
@@ -43,7 +46,7 @@ export default function Fleet() {
   return (
     <div className="page">
       <div className="page-head">
-        <div><h1>Cars & drivers</h1><p className="muted">Each driver gets a private mobile link to see their trips and report pickups and drop-offs.</p></div>
+        <div><h1>Cars & drivers</h1><p className="muted">Each driver gets a private mobile link to see their trips and report pickups and drop-offs. A link stops working 48 hours after the driver's last trip (or 7 days after it was issued if they have none).</p></div>
       </div>
 
       <section className="card">
@@ -53,7 +56,7 @@ export default function Fleet() {
         </div>
         {!drivers.data.length ? <Empty>No drivers yet.</Empty> : (
           <table className="table">
-            <thead><tr><th>Driver</th><th>Mobile</th><th>Languages</th><th>Dedicated to</th><th>Last location</th><th>Status</th><th>Driver link</th><th /></tr></thead>
+            <thead><tr><th>Driver</th><th>Mobile</th><th>Languages</th><th>Dedicated to</th><th>Last location</th><th>Status</th>{canEdit && <th>Driver link</th>}<th /></tr></thead>
             <tbody>
               {drivers.data.map((d) => (
                 <tr key={d.id}>
@@ -63,12 +66,21 @@ export default function Fleet() {
                   <td className="small">{d.dedicated_guests ? `${d.dedicated_guests} guest(s)` : '—'}</td>
                   <td className="small">{d.last_lat != null ? <a target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${d.last_lat},${d.last_lng}`}>📍 {fmtAgo(d.last_seen_at)}</a> : '—'}</td>
                   <td><Badge value={d.status} label={DRIVER_STATUS[d.status]} /></td>
-                  <td className="nowrap">
-                    <button className="link small" onClick={() => copy(d.portal_url)}>Copy</button>
-                    {d.phone && <> · <a className="link small" target="_blank" rel="noreferrer"
-                      href={`https://wa.me/${d.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Your trip sheet: ${d.portal_url}`)}`}>WhatsApp</a></>}
-                    {' · '}<a className="link small" href={d.portal_url} target="_blank" rel="noreferrer">Open</a>
-                  </td>
+                  {canEdit && (
+                    <td className="nowrap">
+                      {new Date(d.link_expires_at) < new Date() ? (
+                        <span className="small warn">Expired. It works again once this driver has an upcoming trip.</span>
+                      ) : (
+                        <>
+                          <button className="link small" onClick={() => copy(d.portal_url)}>Copy</button>
+                          {d.phone && <> · <a className="link small" target="_blank" rel="noreferrer"
+                            href={`https://wa.me/${d.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Your trip sheet: ${d.portal_url}`)}`}>WhatsApp</a></>}
+                          {' · '}<a className="link small" href={d.portal_url} target="_blank" rel="noreferrer">Open</a>
+                        </>
+                      )}
+                      <div className="muted small">Works until {fmtDateTime(d.link_expires_at)}</div>
+                    </td>
+                  )}
                   <td>{canEdit && <button className="link small" onClick={() => setModal({ kind: 'drivers', data: d })}>Edit</button>}</td>
                 </tr>
               ))}

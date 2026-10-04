@@ -9,7 +9,7 @@ const NEXT = { scheduled: ['en_route', 'Driver en route'], en_route: ['picked_up
 const localToday = () => new Date().toLocaleDateString('en-CA');
 
 export default function Transfers() {
-  const { event, canEdit } = useApp();
+  const { event, canEdit, can } = useApp();
   const [date, setDate] = useState(localToday());
   const transfers = useApi(`/events/${event.id}/transfers${date ? `?date=${date}` : ''}`, { poll: 20000 });
   const guests = useApi(`/events/${event.id}/guests`).data;
@@ -89,7 +89,7 @@ export default function Transfers() {
                     </div>
                   </td>
                   <td className="row-actions">
-                    {canEdit && NEXT[t.status] && <button className="btn btn-primary btn-sm" onClick={() => setStatus(t, NEXT[t.status][0])}>{NEXT[t.status][1]}</button>}
+                    {can.handle && NEXT[t.status] && <button className="btn btn-primary btn-sm" onClick={() => setStatus(t, NEXT[t.status][0])}>{NEXT[t.status][1]}</button>}
                     {canEdit && <button className="link small" onClick={() => setModal({ ...t, passenger_ids: t.passengers.map((p) => p.id) })}>Edit</button>}
                   </td>
                 </tr>

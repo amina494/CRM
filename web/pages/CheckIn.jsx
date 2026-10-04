@@ -7,7 +7,8 @@ import { CATEGORIES } from '../constants.js';
 
 /** Door check-in: scan the QR code on the guest's wallet pass or type the code. */
 export default function CheckIn() {
-  const { event, canEdit } = useApp();
+  const { event, can } = useApp();
+  const canEdit = can.handle;
   const [code, setCode] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -20,7 +21,7 @@ export default function CheckIn() {
     if (!token) return;
     setError(null);
     try {
-      setResult(await api.post('/check-in', { token, event_id: event.id }));
+      setResult(await api.post('/check-in', { code: token, event_id: event.id }));
       setCode('');
     } catch (err) {
       setResult(null);
@@ -57,11 +58,11 @@ export default function CheckIn() {
   const g = result?.guest;
   return (
     <div className="page narrow">
-      <div className="page-head"><div><h1>Check-in</h1><p className="muted">Scan the QR code from the guest's wallet pass or invitation.</p></div></div>
+      <div className="page-head"><div><h1>Check-in</h1><p className="muted">Scan the QR code on the guest's wallet pass or invitation page. It holds an entrance code that only works here: it cannot open the guest's invitation.</p></div></div>
       {!canEdit ? <div className="alert alert-warn">Your role is read-only.</div> : (
         <section className="card">
           <form className="checkin-form" onSubmit={(e) => { e.preventDefault(); submit(code.trim()); }}>
-            <input ref={inputRef} autoFocus placeholder="Scan or type invitation code" value={code} onChange={(e) => setCode(e.target.value)} />
+            <input ref={inputRef} autoFocus placeholder="Scan or type the entrance code" value={code} onChange={(e) => setCode(e.target.value)} />
             <button className="btn btn-primary">Check in</button>
             {canScan && <button type="button" className="btn btn-ghost" onClick={() => setScanning((s) => !s)}>{scanning ? 'Stop camera' : 'Use camera'}</button>}
           </form>

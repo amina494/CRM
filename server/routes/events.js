@@ -4,6 +4,7 @@ import { requireAdmin } from '../auth.js';
 import { accessibleEventIds, assertEvent, eventRole, forbidden } from '../access.js';
 import { todayIn } from '../services/format.js';
 import { retentionSummary, anonymiseEvent } from '../services/retention.js';
+import { maskLinks } from './guests.js';
 import { badRequest, notFound } from '../services/tracking.js';
 
 const r = Router();
@@ -123,9 +124,11 @@ r.get('/events/:id/activity', (req, res) => {
 });
 
 r.get('/events/:id/messages', (req, res) => {
-  assertOverview(req.user, req.params.id);
-  res.json(all(`SELECT m.*, g.first_name, g.last_name FROM messages m JOIN guests g ON g.id = m.guest_id
-    WHERE g.event_id = ? ORDER BY m.sent_at DESC LIMIT 500`, req.params.id));
+  const role = assertOverview(req.user, req.params.id);
+  const rows = all(`SELECT m.*, g.first_name, g.last_name FROM messages m JOIN guests g ON g.id = m.guest_id
+    WHERE g.event_id = ? ORDER BY m.sent_at DESC LIMIT 500`, req.params.id);
+  // Viewers can read the outbox but not use the guests' invitation links.
+  res.json(role === 'viewer' ? rows.map((m) => ({ ...m, body: maskLinks(m.body) })) : rows);
 });
 
 export default r;
