@@ -26,7 +26,7 @@ function chunk(type, data) {
  * Renders a square badge: a filled background with a centered ring in the
  * accent color. `pixel(x, y)` may be supplied for custom drawings.
  */
-export function badgePng(size, bg = [20, 40, 60], fg = [201, 162, 39]) {
+export function badgePng(size, bg = [30, 27, 26], fg = [239, 95, 34]) {
   const raw = Buffer.alloc((size * 4 + 1) * size);
   const c = (size - 1) / 2;
   const rOuter = size * 0.36;

@@ -1,5 +1,6 @@
 // Bilingual (English / Arabic) invitation content.
 import { config } from '../config.js';
+import { brand } from '../brand.js';
 import { escapeHtml, formatEventDate, guestDisplayName } from './format.js';
 
 export const inviteUrl = (guest) => `${config.publicUrl}/i/${guest.invite_token}`;
@@ -41,11 +42,11 @@ export function invitationContent(event, guest) {
 
 function htmlLayout(dir, lang, name, text, url, cta) {
   const paragraphs = text.split('\n').slice(1).map((l) => `<p style="margin:0 0 12px">${escapeHtml(l)}</p>`).join('');
-  return `<!doctype html><html lang="${lang}" dir="${dir}"><body style="margin:0;background:#f4f1ea;font-family:Georgia,'Times New Roman',serif;color:#14283c">
+  return `<!doctype html><html lang="${lang}" dir="${dir}"><body style="margin:0;background:${brand.background};font-family:${brand.font};color:${brand.primary}">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
-<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-top:6px solid #c9a227">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-top:6px solid ${brand.accent}">
 <tr><td style="padding:40px 40px 32px;text-align:${dir === 'rtl' ? 'right' : 'left'}">
 <p style="margin:0 0 20px;font-size:20px">${escapeHtml(text.split('\n')[0])}</p>${paragraphs}
-<p style="margin:28px 0 0;text-align:center"><a href="${escapeHtml(url)}" style="background:#14283c;color:#fff;padding:14px 28px;text-decoration:none;display:inline-block;font-family:Arial,sans-serif;font-size:15px">${escapeHtml(cta)}</a></p>
+<p style="margin:28px 0 0;text-align:center"><a href="${escapeHtml(url)}" style="background:${brand.primary};color:${brand.onPrimary};padding:14px 28px;text-decoration:none;display:inline-block;font-family:${brand.font};font-size:15px">${escapeHtml(cta)}</a></p>
 </td></tr></table></td></tr></table></body></html>`;
 }

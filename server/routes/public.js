@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import { all, get, insert, run, tx, nowIso, logActivity } from '../db.js';
 import { newToken } from '../auth.js';
 import { config } from '../config.js';
+import { brand } from '../brand.js';
 import { applePass, googleSaveUrl, walletStatus, WalletNotConfigured } from '../services/wallet.js';
 import { eventIcs } from '../services/ics.js';
 import { inviteUrl } from '../services/invitations.js';
@@ -137,7 +138,7 @@ r.get('/invite/:token/event.ics', (req, res) => {
 r.get('/invite/:token/qr.svg', async (req, res) => {
   const { guest } = loadInvite(req.params.token);
   res.setHeader('Content-Type', 'image/svg+xml');
-  res.send(await QRCode.toString(guest.invite_token, { type: 'svg', margin: 1, color: { dark: '#14283c' } }));
+  res.send(await QRCode.toString(guest.invite_token, { type: 'svg', margin: 1, color: { dark: brand.primary } }));
 });
 
 // --- Driver portal ----------------------------------------------------

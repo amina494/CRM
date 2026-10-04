@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { PKPass, PassType } from 'passkit-generator';
 import { config } from '../config.js';
+import { brand, rgb, rgbArray } from '../brand.js';
 import { badgePng } from './png.js';
 import { guestDisplayName, localToDate, formatEventDate } from './format.js';
 
@@ -23,12 +24,13 @@ export function walletStatus() {
 
 let iconCache;
 function icons() {
+  const colors = [rgbArray(brand.primary), rgbArray(brand.accent)];
   iconCache ??= {
-    'icon.png': badgePng(29),
-    'icon@2x.png': badgePng(58),
-    'icon@3x.png': badgePng(87),
-    'logo.png': badgePng(50),
-    'logo@2x.png': badgePng(100),
+    'icon.png': badgePng(29, ...colors),
+    'icon@2x.png': badgePng(58, ...colors),
+    'icon@3x.png': badgePng(87, ...colors),
+    'logo.png': badgePng(50, ...colors),
+    'logo@2x.png': badgePng(100, ...colors),
   };
   return iconCache;
 }
@@ -67,9 +69,9 @@ export function applePass(event, guest, extra = {}) {
       organizationName: config.orgName,
       description: d.eventName,
       logoText: d.eventName,
-      backgroundColor: 'rgb(20,40,60)',
-      foregroundColor: 'rgb(255,255,255)',
-      labelColor: 'rgb(201,162,39)',
+      backgroundColor: rgb(brand.primary),
+      foregroundColor: rgb(brand.onPrimary),
+      labelColor: rgb(brand.accent),
     },
   );
 
@@ -118,7 +120,7 @@ export function googleSaveUrl(event, guest, extra = {}) {
       address: { defaultValue: { language: 'en-US', value: event.venue_address || event.venue } },
     } }),
     ...(start && { dateTime: { start: start.toISOString(), ...(end && { end: end.toISOString() }) } }),
-    hexBackgroundColor: '#14283c',
+    hexBackgroundColor: brand.primary,
   };
   const eventTicketObject = {
     id: `${issuer}.guest-${guest.id}-${guest.invite_token.slice(0, 8).replace(/[^\w.-]/g, '')}`,

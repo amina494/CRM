@@ -51,6 +51,12 @@ function StaffApp() {
   const [events, setEvents] = useState(null);
   const [eventId, setEventIdState] = useState(() => Number(localStorage.getItem('eventId')) || null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('theme') || 'auto'; } catch { return 'auto'; } });
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'auto') delete root.dataset.theme; else root.dataset.theme = theme;
+    try { localStorage.setItem('theme', theme); } catch { /* private mode */ }
+  }, [theme]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -120,6 +126,11 @@ function StaffApp() {
               </NavLink>
             ))}
           </nav>
+          <div className="theme-switch" role="group" aria-label="Theme">
+            {[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([k, label]) => (
+              <button key={k} className={theme === k ? 'on' : ''} onClick={() => setTheme(k)}>{label}</button>
+            ))}
+          </div>
           <div className="sidebar-foot">
             <div className="me">
               <div className="me-name">{me.name}</div>
