@@ -74,3 +74,14 @@ export async function sendMessage({ guestId, channel, to, subject, text, html, s
   );
   return { status, error };
 }
+
+/**
+ * Sends an account email to a staff member (password reset). The body is not
+ * stored in the outbox, because it carries a sign-in secret.
+ * @returns {boolean} true when it was handed to the mail server
+ */
+export async function sendSystemEmail({ to, subject, text }) {
+  if (!mailer()) return false;
+  await mailer().sendMail({ from: config.smtp.from, to, subject, text });
+  return true;
+}
