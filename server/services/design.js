@@ -13,6 +13,11 @@ export const HEADING_FONTS = {
   'IBM Plex Sans': '400;500;600;700',
   Montserrat: '400;500;600;700',
 };
+/** Fallbacks for when the web font cannot load (many email apps): keep sans headings sans. */
+const SANS_HEADINGS = new Set(['IBM Plex Sans', 'Montserrat']);
+export const headingStack = (font) => (SANS_HEADINGS.has(font)
+  ? `'${font}', 'Helvetica Neue', Arial, sans-serif` : `'${font}', Georgia, 'Times New Roman', serif`);
+
 export const ARABIC_FONTS = {
   'IBM Plex Sans Arabic': '400;500;600;700',
   'Noto Kufi Arabic': '400;500;600;700',

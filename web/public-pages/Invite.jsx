@@ -88,7 +88,8 @@ export function designStyle(d) {
     '--inv-text': d.text,
     '--inv-on-accent': d.on_accent,
     '--inv-on-bg': d.on_background,
-    '--inv-font-heading': `'${d.heading_font}', Georgia, serif`,
+    '--inv-font-heading': ['IBM Plex Sans', 'Montserrat'].includes(d.heading_font)
+      ? `'${d.heading_font}', 'Helvetica Neue', Arial, sans-serif` : `'${d.heading_font}', Georgia, serif`,
     '--inv-font-ar': `'${d.arabic_font}', 'IBM Plex Sans Arabic', sans-serif`,
     ...(d.layout === 'photo' && d.cover_url && {
       backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("${d.cover_url}")`,
