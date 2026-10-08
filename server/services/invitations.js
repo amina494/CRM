@@ -1,7 +1,7 @@
 // Bilingual (English / Arabic) invitation content.
 import { config } from '../config.js';
 import { brand } from '../brand.js';
-import { resolveDesign } from './design.js';
+import { headingStack, resolveDesign } from './design.js';
 import { escapeHtml, formatEventDate, guestDisplayName } from './format.js';
 
 export const inviteUrl = (guest) => `${config.publicUrl}/i/${guest.invite_token}`;
@@ -51,7 +51,7 @@ export function invitationContent(event, guest) {
 function htmlLayout(dir, lang, text, url, cta, d, kicker) {
   const align = dir === 'rtl' ? 'right' : 'left';
   const abs = (u) => `${config.publicUrl}${u}`;
-  const headFont = escapeHtml(lang === 'ar' ? `'${d.arabic_font}', Tahoma, Arial, sans-serif` : `'${d.heading_font}', Georgia, 'Times New Roman', serif`);
+  const headFont = escapeHtml(lang === 'ar' ? `'${d.arabic_font}', Tahoma, Arial, sans-serif` : headingStack(d.heading_font));
   const bodyFont = escapeHtml(lang === 'ar' ? `'${d.arabic_font}', Tahoma, Arial, sans-serif` : brand.font);
   const logoSrc = d.logo === 'custom' ? abs(d.logo_url) : d.logo === 'yax' ? abs('/yax-email-logo.png') : null;
   const lines = text.split('\n');
