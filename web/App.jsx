@@ -3,6 +3,7 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import { api } from './api.js';
 import { Loading } from './components/ui.jsx';
 import Logo from './components/Logo.jsx';
+import EventLogo from './components/EventLogo.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Guests from './pages/Guests.jsx';
@@ -180,7 +181,7 @@ function StaffApp() {
         <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
           <div className="brand">
             {event?.theme?.logo_url ? (
-              <div className="event-logo"><img src={event.theme.logo_url} alt={`${event.name} logo`} /></div>
+              <EventLogo className="event-logo" url={event.theme.logo_url} alt={`${event.name} logo`} />
             ) : <Logo height={26} className="brand-logo" />}
             <div className="brand-sub">{event?.theme?.logo_url ? <>Guest management · <Logo height={9} className="brand-logo inline-logo" /></> : 'Guest management'}</div>
           </div>
@@ -213,7 +214,7 @@ function StaffApp() {
         <div className="main">
           <header className="topbar">
             <button className="icon-btn menu-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="Menu">☰</button>
-            {event?.theme?.logo_url ? <img className="topbar-event-logo" src={event.theme.logo_url} alt="" /> : <Logo height={18} className="brand-logo" />}
+            {event?.theme?.logo_url ? <EventLogo className="topbar-event-logo" url={event.theme.logo_url} /> : <Logo height={18} className="brand-logo" />}
             <div className="topbar-title">{event?.name || 'No event yet'}</div>
           </header>
           <main className="content">

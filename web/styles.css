@@ -109,9 +109,8 @@ textarea { resize: vertical; }
 .logo svg { height: 100%; width: auto; display: block; }
 .brand-logo { color: var(--yax); }
 .inline-logo { vertical-align: -1px; }
-.event-logo { background: #ffffff; border-radius: 8px; padding: 8px 10px; line-height: 0; max-width: 100%; }
-.event-logo img { max-height: 44px; max-width: 176px; width: auto; display: block; }
-.topbar-event-logo { height: 24px; width: auto; background: #ffffff; border-radius: 4px; padding: 2px 4px; }
+.event-logo { display: block; height: 48px; max-width: 190px; width: auto; object-fit: contain; object-position: left center; }
+.topbar-event-logo { display: block; height: 26px; max-width: 120px; width: auto; object-fit: contain; }
 .brand-sub { font-size: 11px; color: var(--side-muted); text-transform: uppercase; letter-spacing: 0.12em; }
 .event-select { background: var(--brand-2); color: var(--on-brand); border-color: var(--side-line); margin-bottom: 12px; }
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
