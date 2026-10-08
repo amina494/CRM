@@ -15,6 +15,7 @@ import { todayIn, localToDate } from '../services/format.js';
 import { TRANSFER_LIST_SQL } from './logistics.js';
 import { newCheckinCode } from './guests.js';
 import { driverLinkExpiresAt } from '../services/driverLink.js';
+import { resolveDesign } from '../services/design.js';
 
 const r = Router();
 
@@ -56,6 +57,7 @@ r.get('/invite/:token', (req, res) => {
     companions,
     rsvp_closed: rsvpClosed(event),
     wallet: walletStatus(),
+    design: resolveDesign(event),
   });
 });
 
@@ -142,6 +144,17 @@ r.get('/invite/:token/qr.svg', async (req, res) => {
   const { guest } = loadInvite(req.params.token);
   res.setHeader('Content-Type', 'image/svg+xml');
   res.send(await QRCode.toString(guest.checkin_code, { type: 'svg', margin: 1, color: { dark: brand.primary } }));
+});
+
+// Images used by an invitation design. Ids are random and change on every
+// upload, so the image can be cached by browsers for a long time.
+r.get('/assets/:id', (req, res) => {
+  const a = get('SELECT mime, data FROM event_assets WHERE id = ?', String(req.params.id));
+  if (!a) throw notFound('Image not found');
+  res.setHeader('Content-Type', a.mime);
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Content-Security-Policy', "default-src 'none'");
+  res.send(Buffer.from(a.data));
 });
 
 // --- Driver portal ----------------------------------------------------

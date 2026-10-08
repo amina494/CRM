@@ -270,6 +270,19 @@ CREATE TABLE IF NOT EXISTS auth_attempts (
 );
 CREATE INDEX IF NOT EXISTS idx_auth_attempts ON auth_attempts(key, at);
 
+-- Images for an event's invitation design (cover photo, own logo). Kept in
+-- the database so a backup of the one file includes them. The id is random,
+-- because the invitation page shows them without signing in.
+CREATE TABLE IF NOT EXISTS event_assets (
+  id         TEXT PRIMARY KEY,
+  event_id   INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  kind       TEXT NOT NULL CHECK (kind IN ('cover','logo')),
+  mime       TEXT NOT NULL,
+  data       BLOB NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_event_assets_event ON event_assets(event_id, kind);
+
 -- One-time password reset links. Only a hash of the token is stored.
 CREATE TABLE IF NOT EXISTS password_resets (
   token_hash TEXT PRIMARY KEY,

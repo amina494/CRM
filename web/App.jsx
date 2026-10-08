@@ -17,6 +17,7 @@ import Messages from './pages/Messages.jsx';
 import Staff from './pages/Staff.jsx';
 import Events from './pages/Events.jsx';
 import Audit from './pages/Audit.jsx';
+import InvitationDesign from './pages/InvitationDesign.jsx';
 import Security from './pages/Security.jsx';
 import ResetPassword from './public-pages/ResetPassword.jsx';
 import Invite from './public-pages/Invite.jsx';
@@ -185,7 +186,7 @@ function StaffApp() {
             <div className="topbar-title">{event?.name || 'No event yet'}</div>
           </header>
           <main className="content">
-            {!event && !['/events', '/staff', '/security', '/audit'].includes(location.pathname) ? (
+            {!event && !['/events', '/staff', '/security', '/audit'].includes(location.pathname) && !location.pathname.startsWith('/events/') ? (
               <Navigate to="/events" replace />
             ) : (
               <Routes>
@@ -201,6 +202,7 @@ function StaffApp() {
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/staff" element={<Staff />} />
                 <Route path="/events" element={<Events />} />
+                <Route path="/events/:id/design" element={<InvitationDesign />} />
                 <Route path="/security" element={<Security />} />
                 <Route path="/audit" element={can.admin ? <Audit /> : <Navigate to="/" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

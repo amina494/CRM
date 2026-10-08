@@ -1,10 +1,14 @@
-import { Router } from 'express';
-import { all, get, insert, update, run, logActivity } from '../db.js';
+import express, { Router } from 'express';
+import { all, get, insert, update, run, tx, logActivity } from '../db.js';
+import { newToken } from '../auth.js';
 import { requireAdmin } from '../auth.js';
 import { accessibleEventIds, assertEvent, eventRole, forbidden } from '../access.js';
 import { todayIn } from '../services/format.js';
 import { retentionSummary, anonymiseEvent } from '../services/retention.js';
 import { maskLinks } from './guests.js';
+import {
+  ARABIC_FONTS, DEFAULT_DESIGN, HEADING_FONTS, cleanDesign, imageType, resolveDesign,
+} from '../services/design.js';
 import { badRequest, notFound } from '../services/tracking.js';
 
 const r = Router();
@@ -61,6 +65,57 @@ r.delete('/events/:id', requireAdmin, (req, res) => {
   run('DELETE FROM events WHERE id = ?', req.params.id);
   logActivity({ action: 'event.deleted', details: e.name, req });
   res.json({ ok: true });
+});
+
+// --- Invitation design (coordinators of the event, and admins) ---------
+r.get('/events/:id/design', (req, res) => {
+  assertEvent(req.user, req.params.id, 'coordinator');
+  const e = get('SELECT * FROM events WHERE id = ?', req.params.id);
+  res.json({ design: resolveDesign(e), defaults: DEFAULT_DESIGN, fonts: { heading: Object.keys(HEADING_FONTS), arabic: Object.keys(ARABIC_FONTS) } });
+});
+
+r.put('/events/:id/design', (req, res) => {
+  assertEvent(req.user, req.params.id, 'coordinator');
+  const e = get('SELECT * FROM events WHERE id = ?', req.params.id);
+  if (req.body.reset) {
+    tx(() => {
+      run('UPDATE events SET design = NULL WHERE id = ?', e.id);
+      run('DELETE FROM event_assets WHERE event_id = ?', e.id);
+    });
+    logActivity({ eventId: e.id, action: 'event.design_reset', req });
+    return res.json({ design: resolveDesign({ ...e, design: null }) });
+  }
+  let saved = {};
+  try { saved = e.design ? JSON.parse(e.design) : {}; } catch { saved = {}; }
+  const next = { ...saved, ...cleanDesign(req.body) };
+  run('UPDATE events SET design = ? WHERE id = ?', JSON.stringify(next), e.id);
+  logActivity({ eventId: e.id, action: 'event.design_updated', req });
+  res.json({ design: resolveDesign({ ...e, design: JSON.stringify(next) }) });
+});
+
+// The image arrives as the raw request body (PNG, JPEG or WebP, up to 5 MB).
+const rawImage = express.raw({ type: () => true, limit: '5mb' });
+r.put('/events/:id/design/image/:kind', rawImage, (req, res) => {
+  assertEvent(req.user, req.params.id, 'coordinator');
+  const { kind } = req.params;
+  if (!['cover', 'logo'].includes(kind)) throw badRequest('Unknown image');
+  const mime = imageType(req.body);
+  if (!mime) throw badRequest('Please upload a PNG, JPEG or WebP image');
+  const id = newToken(18);
+  tx(() => {
+    run('DELETE FROM event_assets WHERE event_id = ? AND kind = ?', req.params.id, kind);
+    run('INSERT INTO event_assets (id, event_id, kind, mime, data) VALUES (?,?,?,?,?)', id, req.params.id, kind, mime, req.body);
+  });
+  logActivity({ eventId: Number(req.params.id), action: `event.design_${kind}_uploaded`, details: `${Math.round(req.body.length / 1024)} KB`, req });
+  const e = get('SELECT * FROM events WHERE id = ?', req.params.id);
+  res.json({ design: resolveDesign(e) });
+});
+
+r.delete('/events/:id/design/image/:kind', (req, res) => {
+  assertEvent(req.user, req.params.id, 'coordinator');
+  run('DELETE FROM event_assets WHERE event_id = ? AND kind = ?', req.params.id, req.params.kind);
+  const e = get('SELECT * FROM events WHERE id = ?', req.params.id);
+  res.json({ design: resolveDesign(e) });
 });
 
 // --- Retention ---------------------------------------------------------

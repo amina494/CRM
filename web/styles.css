@@ -343,70 +343,89 @@ textarea { resize: vertical; }
 }
 
 /* ======================================================================
-   Guest-facing invitation page – always a light "paper" card on the brand
-   colour, whatever the device theme.
+   Guest-facing invitation page. Every colour and font comes from the
+   event's invitation design (--inv-*); the values below are the YAX look
+   used when an event has no design of its own.
    ====================================================================== */
 .invite-page {
-  --surface: #ffffff; --text: #1e1b1a; --muted: #6f6763; --line: #e4dfdb; --red: #b42318;
-  --paper: #fbf9f8;
-  --accent-ink: #b23e0c; --accent-soft: #fde9df; --accent-line: #f3cdb9;
+  --inv-bg: #1e1b1a; --inv-card: #fbf9f8; --inv-accent: #ef5f22; --inv-heading: #1e1b1a; --inv-text: #1e1b1a;
+  --inv-on-accent: #1e1b1a; --inv-on-bg: #f1ece9;
+  --inv-font-heading: 'IBM Plex Serif', Georgia, serif; --inv-font-ar: 'IBM Plex Sans Arabic', sans-serif;
+  /* Shades derived from the design */
+  --inv-ink: color-mix(in srgb, var(--inv-accent) 70%, var(--inv-text));
+  --inv-soft: color-mix(in srgb, var(--inv-accent) 12%, var(--inv-card));
+  --inv-line: color-mix(in srgb, var(--inv-accent) 35%, var(--inv-card));
+  --inv-muted: color-mix(in srgb, var(--inv-text) 65%, var(--inv-card));
+  --red: #b42318;
   color-scheme: light;
-  min-height: 100vh; color: var(--text);
-  background: radial-gradient(circle at top, var(--brand-2) 0%, var(--brand) 60%);
+  min-height: 100vh; color: var(--inv-text);
+  background-color: var(--inv-bg);
+  background-image: radial-gradient(circle at top, color-mix(in srgb, var(--inv-bg) 82%, #ffffff) 0%, var(--inv-bg) 60%);
+  background-size: cover; background-position: center; background-attachment: fixed;
   padding: 64px 16px 60px; display: flex; justify-content: center; align-items: flex-start; position: relative;
   font-family: var(--font);
 }
-.invite-page[dir='rtl'] { font-family: var(--font-ar); }
-.lang-toggle { position: absolute; top: 14px; inset-inline-end: 16px; background: transparent; color: var(--on-brand); border: 1px solid color-mix(in srgb, var(--on-brand) 45%, transparent); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
-.invite-card { background: var(--paper); max-width: 560px; width: 100%; border-radius: 4px; padding: 44px 36px 36px; text-align: center; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35); position: relative; border: 1px solid var(--accent-line); }
-.invite-card::before { content: ''; position: absolute; inset: 10px; border: 1px solid var(--accent-line); pointer-events: none; }
-.invite-logo { color: var(--accent); margin: 0 auto 22px; }
-.invite-kicker { text-transform: uppercase; letter-spacing: 0.2em; font-size: 11px; font-weight: 500; color: var(--accent-ink); margin: 0 0 10px; }
+.invite-page.is-preview { min-height: 100%; background-attachment: scroll; padding-top: 56px; }
+.invite-page[dir='rtl'] { font-family: var(--inv-font-ar); }
+.invite-page .muted { color: var(--inv-muted); }
+.lang-toggle { position: absolute; top: 14px; inset-inline-end: 16px; background: transparent; color: var(--inv-on-bg); border: 1px solid color-mix(in srgb, var(--inv-on-bg) 45%, transparent); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.invite-card { background: var(--inv-card); max-width: 560px; width: 100%; border-radius: 4px; text-align: center; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35); position: relative; border: 1px solid var(--inv-line); overflow: hidden; }
+.invite-body { padding: 44px 36px 36px; position: relative; }
+.invite-body::before { content: ''; position: absolute; inset: 10px; border: 1px solid var(--inv-line); pointer-events: none; }
+.invite-cover { display: block; width: 100%; height: 220px; object-fit: cover; }
+.invite-cover + .invite-body::before { top: 0; }
+.invite-logo { color: var(--inv-accent); margin: 0 auto 22px; }
+.invite-own-logo { display: block; max-height: 64px; max-width: 220px; margin: 0 auto 22px; object-fit: contain; }
+.invite-kicker { text-transform: uppercase; letter-spacing: 0.2em; font-size: 11px; font-weight: 500; color: var(--inv-ink); margin: 0 0 10px; }
 .invite-page[dir='rtl'] .invite-kicker { letter-spacing: 0; font-size: 13px; }
-.invite-guest { font-family: var(--font-display); font-size: 22px; margin: 0 0 8px; color: var(--brand); }
+.invite-guest { font-family: var(--inv-font-heading); font-size: 22px; margin: 0 0 8px; color: var(--inv-heading); }
 .invite-page[dir='rtl'] .invite-guest,
 .invite-page[dir='rtl'] .invite-title,
 .invite-page[dir='rtl'] .rsvp-q,
-.invite-page[dir='rtl'] .rsvp-status { font-family: var(--font-ar); }
-.invite-host { color: var(--muted); margin: 0; }
-.invite-title { font-family: var(--font-display); font-weight: 500; font-size: 34px; line-height: 1.2; color: var(--brand); margin: 10px 0 14px; }
-.invite-desc { color: var(--muted); margin: 0 auto 20px; max-width: 420px; line-height: 1.6; }
-.invite-details { display: flex; flex-direction: column; gap: 14px; margin: 24px 0; padding: 20px 0; border-top: 1px solid var(--accent-line); border-bottom: 1px solid var(--accent-line); }
-.invite-details dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent-ink); margin-bottom: 4px; }
+.invite-page[dir='rtl'] .rsvp-status { font-family: var(--inv-font-ar); }
+.invite-host { color: var(--inv-muted); margin: 0; }
+.invite-title { font-family: var(--inv-font-heading); font-weight: 500; font-size: 34px; line-height: 1.2; color: var(--inv-heading); margin: 10px 0 14px; }
+.invite-desc { color: var(--inv-muted); margin: 0 auto 20px; max-width: 420px; line-height: 1.6; }
+.invite-details { display: flex; flex-direction: column; gap: 14px; margin: 24px 0; padding: 20px 0; border-top: 1px solid var(--inv-line); border-bottom: 1px solid var(--inv-line); }
+.invite-details dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--inv-ink); margin-bottom: 4px; }
 .invite-page[dir='rtl'] .invite-details dt { letter-spacing: 0; font-size: 12px; }
-.invite-details dd { margin: 0; color: var(--brand); line-height: 1.5; }
-.invite-details a { color: var(--brand-2); }
+.invite-details dd { margin: 0; color: var(--inv-heading); line-height: 1.5; }
+.invite-details a { color: var(--inv-ink); }
 .invite-rsvp { margin-top: 8px; }
 .invite-rsvp form { display: flex; flex-direction: column; gap: 12px; }
-.invite-rsvp input, .invite-rsvp textarea { background: #fff; color: var(--text); }
-.rsvp-q { font-family: var(--font-display); font-size: 22px; color: var(--brand); font-weight: 500; }
+.invite-rsvp input, .invite-rsvp textarea { background: #fff; color: #1e1b1a; }
+.rsvp-q { font-family: var(--inv-font-heading); font-size: 22px; color: var(--inv-heading); font-weight: 500; }
 .invite-page[dir='rtl'] .rsvp-q { font-size: 20px; }
 .rsvp-choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.rsvp-choice { border: 1px solid var(--accent-line); background: #fff; padding: 12px 6px; border-radius: 4px; cursor: pointer; font: inherit; color: var(--brand); }
-.rsvp-choice.on { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.rsvp-choice { border: 1px solid var(--inv-line); background: transparent; padding: 12px 6px; border-radius: 4px; cursor: pointer; font: inherit; color: var(--inv-heading); }
+.rsvp-choice.on { background: var(--inv-heading); color: var(--inv-card); border-color: var(--inv-heading); }
 .rsvp-extra { display: flex; flex-direction: column; gap: 8px; text-align: start; }
 .rsvp-extra p { margin: 0; }
-.invite-submit { background: var(--accent); color: var(--on-accent); border: 0; padding: 14px; font: inherit; font-weight: 600; border-radius: 4px; cursor: pointer; letter-spacing: 0.03em; }
+.invite-submit { background: var(--inv-accent); color: var(--inv-on-accent); border: 0; padding: 14px; font: inherit; font-weight: 600; border-radius: 4px; cursor: pointer; letter-spacing: 0.03em; }
 .invite-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-.invite-link-btn { background: none; border: 0; color: var(--accent-ink); text-decoration: underline; cursor: pointer; font: inherit; }
+.invite-link-btn { background: none; border: 0; color: var(--inv-ink); text-decoration: underline; cursor: pointer; font: inherit; }
 .invite-error { color: var(--red); margin: 0; }
-.rsvp-status { font-family: var(--font-display); font-size: 26px; color: var(--brand); margin: 0; font-weight: 500; }
+.rsvp-status { font-family: var(--inv-font-heading); font-size: 26px; color: var(--inv-heading); margin: 0; font-weight: 500; }
 .rsvp-done p { margin: 6px 0; }
-.invite-pass { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--accent-line); display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.invite-qr { background: #fff; padding: 8px; border: 1px solid var(--accent-line); }
+.invite-pass { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--inv-line); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.invite-qr { background: #fff; padding: 8px; border: 1px solid var(--inv-line); }
+.invite-qr-sample { width: 180px; height: 180px; background-color: #fff; background-image: repeating-conic-gradient(#1e1b1a 0 25%, #fff 0 50%); background-size: 24px 24px; background-clip: content-box; }
 .invite-seat { display: flex; gap: 32px; margin: 6px 0; }
 .invite-seat div { display: flex; flex-direction: column; }
-.invite-seat span { font-size: 11px; color: var(--accent-ink); text-transform: uppercase; letter-spacing: 0.12em; }
-.invite-seat strong { font-size: 20px; color: var(--brand); }
+.invite-seat span { font-size: 11px; color: var(--inv-ink); text-transform: uppercase; letter-spacing: 0.12em; }
+.invite-seat strong { font-size: 20px; color: var(--inv-heading); }
 .wallet-buttons { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 300px; margin-top: 10px; }
-.wallet-btn { display: block; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+.wallet-btn { display: block; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; cursor: pointer; }
 .wallet-btn.apple { background: #000; color: #fff; }
 .wallet-btn.google { background: #fff; color: #1f1f1f; border: 1px solid #dadce0; }
-.wallet-btn.cal { background: transparent; color: var(--brand); border: 1px solid var(--accent-line); font-weight: 500; }
+.wallet-btn.cal { background: transparent; color: var(--inv-heading); border: 1px solid var(--inv-line); font-weight: 500; }
+.invite-closing { margin: 28px 0 0; padding-top: 20px; border-top: 1px solid var(--inv-line); font-family: var(--inv-font-heading); font-size: 17px; line-height: 1.5; color: var(--inv-heading); white-space: pre-line; }
+.invite-page[dir='rtl'] .invite-closing { font-family: var(--inv-font-ar); }
 @media (max-width: 520px) {
-  .invite-card { padding: 36px 20px 28px; }
+  .invite-body { padding: 36px 20px 28px; }
   .invite-title { font-size: 28px; }
   .rsvp-choices { grid-template-columns: 1fr; }
+  .invite-cover { height: 160px; }
 }
 
 /* ======================================================================
@@ -482,4 +501,39 @@ textarea { resize: vertical; }
 @media (max-width: 860px) {
   .access-row { grid-template-columns: 1fr 1fr; }
   .access-row .muted { grid-column: 1 / -1; }
+}
+
+/* --- Invitation design editor ------------------------------------------- */
+.design-page { max-width: 1400px; }
+.design-layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px; align-items: start; }
+.design-controls { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.design-preview { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.preview-bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.phone-frame { width: 390px; height: min(760px, calc(100vh - 140px)); border: 10px solid #111; border-radius: 36px; overflow: auto; background: #111; box-shadow: var(--shadow); }
+.phone-frame .invite-page { min-height: 100%; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.theme-swatch { display: flex; flex-direction: column; gap: 6px; align-items: center; background: none; border: 1px solid var(--line); border-radius: 10px; padding: 10px; cursor: pointer; color: inherit; font: inherit; }
+.theme-swatch:hover { border-color: var(--accent); }
+.swatch-stack { width: 72px; height: 52px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.swatch-stack > span { width: 40px; height: 36px; border-radius: 3px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.swatch-stack i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.swatch-stack b { width: 24px; height: 3px; display: block; }
+.segmented.wide { display: flex; width: 100%; margin-bottom: 8px; }
+.segmented.wide button { flex: 1; }
+.image-row { display: flex; gap: 14px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.image-thumb { width: 120px; height: 60px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.image-thumb.wide { width: 200px; height: 112px; object-fit: cover; }
+.image-thumb.empty { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); }
+.image-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; flex: 1; min-width: 200px; }
+.colour-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-bottom: 8px; }
+.colour-field { display: flex; gap: 10px; align-items: flex-start; }
+.colour-field > span { display: flex; flex-direction: column; gap: 3px; }
+.colour-field input[type='color'] { width: 44px; height: 44px; padding: 2px; border-radius: 8px; cursor: pointer; flex-shrink: 0; }
+.hex-input { width: 110px; font-family: ui-monospace, Menlo, monospace; padding: 4px 8px; }
+.font-sample { font-size: 20px; padding: 6px 2px; color: var(--text); }
+.design-controls .alert { margin-top: 8px; }
+@media (max-width: 1100px) {
+  .design-layout { grid-template-columns: 1fr; }
+  .design-preview { position: static; }
+  .phone-frame { width: min(390px, 100%); }
 }

@@ -35,9 +35,9 @@ test('upgrades a database created from the previous schema', () => {
   for (const [table, col] of [
     ['guests', 'checkin_code'], ['guests', 'backup_host_user_id'], ['drivers', 'token_issued_at'],
     ['users', 'totp_secret'], ['users', 'totp_enabled'], ['users', 'session_epoch'],
-    ['activity_log', 'user_id'], ['activity_log', 'ip'], ['events', 'retention_days'], ['events', 'anonymised_at'],
+    ['activity_log', 'user_id'], ['activity_log', 'ip'], ['events', 'retention_days'], ['events', 'anonymised_at'], ['events', 'design'],
   ]) assert.ok(cols(table).includes(col), `${table}.${col}`);
-  for (const t of ['event_members', 'auth_attempts', 'password_resets']) {
+  for (const t of ['event_members', 'auth_attempts', 'password_resets', 'event_assets']) {
     assert.ok(get("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", t), t);
   }
 
