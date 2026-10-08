@@ -10,6 +10,7 @@ import eventRoutes from './routes/events.js';
 import guestRoutes from './routes/guests.js';
 import logisticsRoutes from './routes/logistics.js';
 import publicRoutes from './routes/public.js';
+import importRoutes from './routes/imports.js';
 
 export function createApp() {
   const app = express();
@@ -33,7 +34,7 @@ export function createApp() {
   app.get('/api/meta', (req, res) => {
     res.json({ org: config.orgName, publicUrl: config.publicUrl, channels: channelStatus(), wallet: walletStatus() });
   });
-  app.use('/api', eventRoutes, guestRoutes, logisticsRoutes);
+  app.use('/api', eventRoutes, guestRoutes, logisticsRoutes, importRoutes);
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
   // Serve the built web app (npm run build) with client-side routing fallback.

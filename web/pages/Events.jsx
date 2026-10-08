@@ -34,7 +34,12 @@ export default function Events() {
     <div className="page">
       <div className="page-head">
         <div><h1>Events</h1><p className="muted">Each event has its own guest list, seating, flights and trips. Hotels, cars, drivers and staff are shared.</p></div>
-        {isAdmin && <button className="btn btn-primary" onClick={() => setModal({ timezone: 'Asia/Riyadh', retention_days: 90 })}>New event</button>}
+        {isAdmin && (
+          <div className="link-row" style={{ marginTop: 0 }}>
+            <Link className="btn btn-ghost" to="/events/import">Import from spreadsheet</Link>
+            <button className="btn btn-primary" onClick={() => setModal({ timezone: 'Asia/Riyadh', retention_days: 90 })}>New event</button>
+          </div>
+        )}
       </div>
       {!events.length && <Empty>Create your first event to get started.</Empty>}
       <div className="event-cards">

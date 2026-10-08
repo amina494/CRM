@@ -537,3 +537,12 @@ textarea { resize: vertical; }
   .design-preview { position: static; }
   .phone-frame { width: min(390px, 100%); }
 }
+
+/* Import an event from a spreadsheet */
+.import-file label.btn { align-self: flex-start; display: inline-block; margin-top: 4px; }
+.import-file h2 { margin-top: 0; }
+.import-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.import-details summary { cursor: pointer; }
+.import-details[open] summary { margin-bottom: 8px; }
+.import-filter { max-width: 320px; width: 100%; }
+@media (max-width: 760px) { .import-stats { grid-template-columns: 1fr 1fr; } }
