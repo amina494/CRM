@@ -140,7 +140,7 @@ test('the preview merges tabs (newest wins), links companions and matches liaiso
   assert.equal(JSON.stringify(data).includes('P1234567') || JSON.stringify(data).includes('secret medical'), false, 'passport and medical columns are never read');
   assert.equal(data.suggested.starts_on, '2031-02-05');
   assert.equal(data.suggested.ends_on, '2031-02-11');
-  assert.equal(data.suggested.venue, 'Alula', 'from the newest tab'"'"'s "Depature Date from alula" header');
+  assert.equal(data.suggested.venue, 'Alula', 'taken from the newest tab header');
 });
 
 test('creating the event writes guests, companions, hotels, flights and liaisons', async () => {
