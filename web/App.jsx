@@ -72,6 +72,27 @@ function permissions(me, event) {
   };
 }
 
+const THEME_VARS = { accent: '--accent', ink: '--accent-ink', primary: '--primary', primary_hover: '--primary-hover', on_primary: '--on-primary', on_accent: '--on-accent', bg: '--bg' };
+const themeBlock = (colours) => Object.entries(colours || {})
+  .filter(([k, v]) => THEME_VARS[k] && /^#[0-9a-f]{6}$/i.test(v || ''))
+  .map(([k, v]) => `${THEME_VARS[k]}: ${v};${k === 'ink' ? ` --link: ${v};` : ''}`).join(' ');
+
+/** Adds (or removes) the selected event's colours on top of the YAX theme. */
+function applyEventTheme(theme) {
+  let el = document.getElementById('event-theme');
+  if (!theme) { el?.remove(); return; }
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'event-theme';
+    document.head.appendChild(el);
+  }
+  const light = themeBlock(theme.light);
+  const dark = themeBlock(theme.dark);
+  el.textContent = `:root { ${light} }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { ${dark} } }
+:root[data-theme='dark'] { ${dark} }`;
+}
+
 const ROLE_LABEL = { admin: 'Admin', coordinator: 'Coordinator', liaison: 'Liaison / host', viewer: 'Viewer' };
 
 function StaffApp() {
@@ -122,6 +143,13 @@ function StaffApp() {
     return upcoming[0] || events[0];
   }, [events, eventId]);
 
+  // While an event with its own design is selected, the staff screens take on
+  // its colours (made readable for light and dark mode) and its logo.
+  useEffect(() => {
+    applyEventTheme(me ? event?.theme : null);
+    return () => applyEventTheme(null);
+  }, [me, event?.theme]);
+
   const can = useMemo(() => permissions(me, event), [me, event]);
   const ctx = useMemo(() => ({
     me, meta, event, events, setEventId, reloadEvents: loadEvents, reloadMe: loadMe, can,
@@ -151,8 +179,10 @@ function StaffApp() {
       <div className="shell">
         <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
           <div className="brand">
-            <Logo height={26} className="brand-logo" />
-            <div className="brand-sub">Guest management</div>
+            {event?.theme?.logo_url ? (
+              <div className="event-logo"><img src={event.theme.logo_url} alt={`${event.name} logo`} /></div>
+            ) : <Logo height={26} className="brand-logo" />}
+            <div className="brand-sub">{event?.theme?.logo_url ? <>Guest management · <Logo height={9} className="brand-logo inline-logo" /></> : 'Guest management'}</div>
           </div>
           {events.length > 0 && (
             <select className="event-select" value={event?.id || ''} onChange={(e) => setEventId(Number(e.target.value))}>
@@ -183,7 +213,7 @@ function StaffApp() {
         <div className="main">
           <header className="topbar">
             <button className="icon-btn menu-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="Menu">☰</button>
-            <Logo height={18} className="brand-logo" />
+            {event?.theme?.logo_url ? <img className="topbar-event-logo" src={event.theme.logo_url} alt="" /> : <Logo height={18} className="brand-logo" />}
             <div className="topbar-title">{event?.name || 'No event yet'}</div>
           </header>
           <main className="content">

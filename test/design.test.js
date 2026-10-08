@@ -118,3 +118,21 @@ test('reset goes back to the YAX style and removes uploaded images', async () =>
   assert.equal(get('SELECT COUNT(*) n FROM event_assets WHERE event_id = ?', ids.a).n, 0);
   assert.equal(get('SELECT design FROM events WHERE id = ?', ids.a).design, null);
 });
+
+test('the staff screens take the selected event\'s colours and logo, readable in light and dark', async () => {
+  const { contrast } = await import('../server/services/design.js');
+  const theme = async () => (await admin.call('GET', '/events')).data.find((e) => e.id === ids.b).theme;
+  assert.equal(await theme(), null, 'an event without a design keeps the YAX look');
+  await admin.call('PUT', `/events/${ids.b}/design`, { accent: '#2f80bf', background: '#eef5f4' });
+  const t = await theme();
+  assert.equal(t.light.accent, '#2f80bf');
+  assert.ok(contrast(t.light.ink, '#ffffff') >= 4.5, 'links and buttons readable on white');
+  assert.ok(contrast(t.dark.ink, '#1d1a19') >= 4.5, 'and on the dark screens');
+  assert.ok(t.light.bg, 'a light page background tints the app');
+  assert.equal(t.logo_url, null);
+  await admin.call('PUT', `/events/${ids.b}/design/image/logo`, PNG, { 'Content-Type': 'image/png' });
+  await admin.call('PUT', `/events/${ids.b}/design`, { logo: 'custom' });
+  assert.match((await theme()).logo_url, /^\/api\/public\/assets\//);
+  await admin.call('PUT', `/events/${ids.b}/design`, { reset: true });
+  assert.equal(await theme(), null, 'reset brings the YAX look back');
+});

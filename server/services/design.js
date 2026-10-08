@@ -138,3 +138,49 @@ export function contrast(a, b) {
 /** Off-white or charcoal, whichever reads better on this colour. */
 export const readableOn = (hex) => (contrast(hex, '#f1ece9') >= contrast(hex, '#1e1b1a') ? '#f1ece9' : '#1e1b1a');
 
+
+// --- The staff app in an event's colours ----------------------------------
+const hex2 = (n) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0');
+/** Mixes colour a towards colour b by t (0–1). */
+export function mix(a, b, t) {
+  const ch = (h, i) => parseInt(h.slice(i, i + 2), 16);
+  return `#${[1, 3, 5].map((i) => hex2(ch(a, i) + (ch(b, i) - ch(a, i)) * t)).join('')}`;
+}
+/** The colour nearest to `hex`, moving towards `target`, that reads at `min` contrast on `on`. */
+function readableShade(hex, target, on, min) {
+  for (let t = 0; t <= 1.0001; t += 0.04) {
+    const c = mix(hex, target, t);
+    if (contrast(c, on) >= min) return c;
+  }
+  return target;
+}
+
+const LIGHT_SURFACE = '#ffffff';
+const DARK_SURFACE = '#1d1a19';
+
+/**
+ * Colours for the staff screens while this event is selected, taken from its
+ * invitation design: the accent (made readable on light and dark screens),
+ * a light page tint, and the event's own logo. Null when the event still
+ * uses the YAX look.
+ */
+export function staffTheme(event) {
+  if (!event.design) return null;
+  const d = resolveDesign(event);
+  const custom = d.logo === 'custom' && d.logo_url;
+  if (d.accent.toLowerCase() === DEFAULT_DESIGN.accent && !custom) return null;
+  const accent = d.accent.toLowerCase();
+  const ink = readableShade(accent, '#000000', LIGHT_SURFACE, 4.5); // links, buttons with white text
+  const bright = readableShade(accent, '#ffffff', DARK_SURFACE, 4.5); // the same on dark screens
+  return {
+    logo_url: custom ? d.logo_url : null,
+    light: {
+      accent, ink, primary: ink, primary_hover: mix(ink, '#000000', 0.15), on_primary: '#ffffff', on_accent: readableOn(accent),
+      // A very light page background from the design tints the app; darker ones are left out.
+      bg: luminance(d.background) > 0.75 ? mix(d.background, '#ffffff', 0.35) : null,
+    },
+    dark: {
+      accent: bright, ink: bright, primary: bright, primary_hover: mix(bright, '#ffffff', 0.15), on_primary: readableOn(bright), on_accent: readableOn(bright),
+    },
+  };
+}

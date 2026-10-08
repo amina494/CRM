@@ -14,6 +14,7 @@
   --primary: #c9450f;        /* primary buttons: deeper orange so white text stays readable (4.8:1) */
   --primary-hover: #b23d0c;
   --on-primary: #ffffff;
+  --yax: #ef5f22;            /* the YAX wordmark keeps its orange whatever the event colours */
 
   /* Derived brand shades */
   --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
@@ -106,7 +107,11 @@ textarea { resize: vertical; }
 .brand { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 4px 8px 18px; }
 .logo { display: inline-flex; align-items: center; line-height: 0; }
 .logo svg { height: 100%; width: auto; display: block; }
-.brand-logo { color: var(--accent); }
+.brand-logo { color: var(--yax); }
+.inline-logo { vertical-align: -1px; }
+.event-logo { background: #ffffff; border-radius: 8px; padding: 8px 10px; line-height: 0; max-width: 100%; }
+.event-logo img { max-height: 44px; max-width: 176px; width: auto; display: block; }
+.topbar-event-logo { height: 24px; width: auto; background: #ffffff; border-radius: 4px; padding: 2px 4px; }
 .brand-sub { font-size: 11px; color: var(--side-muted); text-transform: uppercase; letter-spacing: 0.12em; }
 .event-select { background: var(--brand-2); color: var(--on-brand); border-color: var(--side-line); margin-bottom: 12px; }
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }

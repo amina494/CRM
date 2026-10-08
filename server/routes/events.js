@@ -7,7 +7,7 @@ import { todayIn } from '../services/format.js';
 import { retentionSummary, anonymiseEvent } from '../services/retention.js';
 import { maskLinks } from './guests.js';
 import {
-  ARABIC_FONTS, DEFAULT_DESIGN, HEADING_FONTS, cleanDesign, imageType, resolveDesign,
+  ARABIC_FONTS, DEFAULT_DESIGN, HEADING_FONTS, cleanDesign, imageType, resolveDesign, staffTheme,
 } from '../services/design.js';
 import { badRequest, notFound } from '../services/tracking.js';
 
@@ -31,7 +31,7 @@ r.get('/events', (req, res) => {
   if (ids && !ids.length) return res.json([]);
   const rows = all(`SELECT e.*, (SELECT COUNT(*) FROM guests g WHERE g.event_id = e.id) AS guest_count
     FROM events e ${ids ? `WHERE e.id IN (${ids.map(() => '?').join(',')})` : ''} ORDER BY e.starts_at DESC`, ...(ids || []));
-  res.json(rows.map((e) => ({ ...e, my_role: eventRole(req.user, e.id) })));
+  res.json(rows.map(({ design, ...e }) => ({ ...e, my_role: eventRole(req.user, e.id), theme: staffTheme({ ...e, design }) })));
 });
 
 r.post('/events', requireAdmin, (req, res) => {

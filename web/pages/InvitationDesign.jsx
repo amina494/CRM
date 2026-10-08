@@ -35,7 +35,7 @@ const COLOUR_FIELDS = [
 
 export default function InvitationDesign() {
   const { id } = useParams();
-  const { events, meta } = useApp();
+  const { events, meta, reloadEvents } = useApp();
   const event = events.find((e) => e.id === Number(id));
   const [loaded, setLoaded] = useState(null);
   const [v, setV] = useState(null);
@@ -105,6 +105,7 @@ export default function InvitationDesign() {
       const r = await fn();
       if (r?.design) apply(r.design);
       if (done) setMessage(done);
+      reloadEvents().catch(() => {}); // the staff screens follow the event's colours and logo
     } catch (err) {
       setError(err);
     } finally {
@@ -112,7 +113,7 @@ export default function InvitationDesign() {
     }
   };
 
-  const save = () => run(() => api.put(`/events/${id}/design`, strip(v)), 'Design saved. Guests see it the next time they open their invitation, and new invitation emails use it.');
+  const save = () => run(() => api.put(`/events/${id}/design`, strip(v)), 'Design saved. Guests see it the next time they open their invitation, new invitation emails use it, and the CRM screens use its colours and logo while this event is selected.');
   const reset = () => {
     if (!window.confirm('Go back to the YAX style? Your colours, fonts, wording and uploaded images for this event will be removed.')) return;
     run(() => api.put(`/events/${id}/design`, { reset: true }), 'Back to the YAX style.');
