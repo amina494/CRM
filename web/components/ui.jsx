@@ -198,9 +198,43 @@ export function Empty({ children }) {
   return <div className="empty">{children}</div>;
 }
 
-export function Loading({ error }) {
+export function Loading({ error, plain }) {
   if (error) return <div className="alert alert-error">{error.message}</div>;
-  return <div className="loading">Loading…</div>;
+  if (plain) return <div className="loading">Loading…</div>;
+  // A shimmering outline of a page, so the screen feels ready before the data is.
+  return (
+    <div className="skeleton-page" aria-busy="true" aria-label="Loading">
+      <div className="sk sk-title" />
+      <div className="sk sk-sub" />
+      <div className="sk-tiles">{[0, 1, 2, 3].map((i) => <div key={i} className="sk sk-tile" />)}</div>
+      <div className="sk sk-block" />
+    </div>
+  );
+}
+
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** A number that counts up to its value (and glides to new values when the data refreshes). */
+export function CountUp({ value, duration = 900 }) {
+  const target = Number(value) || 0;
+  const [shown, setShown] = useState(reducedMotion() ? target : 0);
+  const from = useRef(reducedMotion() ? target : 0);
+  useEffect(() => {
+    if (reducedMotion()) { setShown(target); from.current = target; return undefined; }
+    const start = performance.now();
+    const begin = from.current;
+    let frame;
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - (1 - p) ** 3;
+      const v = Math.round(begin + (target - begin) * eased);
+      setShown(v);
+      if (p < 1) frame = requestAnimationFrame(tick); else from.current = target;
+    };
+    frame = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(frame); from.current = target; };
+  }, [target, duration]);
+  return <>{shown.toLocaleString('en-US')}</>;
 }
 
 /** Runs an async action, surfacing errors with alert(). Returns the result. */

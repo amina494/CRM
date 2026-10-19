@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useApp } from '../App.jsx';
-import { Badge, Empty, Loading, ServiceBadge, fmtAgo, fmtTime, useApi } from '../components/ui.jsx';
+import { Badge, CountUp, Empty, Loading, ServiceBadge, fmtAgo, fmtTime, useApi } from '../components/ui.jsx';
 import { CATEGORIES, FLIGHT_STATUS, GUEST_STATUS, RSVP, TONE, TRANSFER_KIND, TRANSFER_STATUS } from '../constants.js';
 
 export default function Dashboard() {
-  const { event } = useApp();
+  const { event, me } = useApp();
   const { data, error } = useApi(`/events/${event.id}/dashboard`, { poll: 30000 });
   if (!data) return <Loading error={error} />;
   const { rsvp, invites, status, category, totals } = data;
@@ -14,8 +14,8 @@ export default function Dashboard() {
     <div className="page">
       <div className="page-head">
         <div>
-          <h1>Dashboard</h1>
-          <p className="muted">{fmtTime(event.starts_at)} · {event.venue || 'Venue TBC'}</p>
+          <h1 className="greeting">{greeting()}, {me?.name?.split(' ')[0] || 'there'}</h1>
+          <p className="muted">{event.name} · {fmtTime(event.starts_at)} · {event.venue || 'Venue TBC'}</p>
         </div>
         <div className="actions">
           <Link className="btn btn-ghost" to="/check-in">Check-in</Link>
@@ -23,10 +23,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="stats">
+      <div className="stats with-hero">
+        <div className="stat stat-hero">
+          <div className="stat-label">Attending</div>
+          <div className="stat-value"><CountUp value={rsvp.attending || 0} /> <span className="stat-sub">of {totals.guests || 0} guests</span></div>
+          <div className="hero-track"><span className="hero-fill" style={{ width: `${((rsvp.attending || 0) / Math.max(totals.guests, 1)) * 100}%` }} /></div>
+          <div className="stat-sub">Expected headcount {totals.expected_headcount || 0}</div>
+        </div>
         <Stat label="Guests on list" value={totals.guests} />
         <Stat label="Invitations sent" value={invited} sub={`${invites.opened || 0} opened`} />
-        <Stat label="Attending" value={rsvp.attending || 0} sub={`Headcount ${totals.expected_headcount || 0}`} tone="green" />
         <Stat label="Awaiting reply" value={(rsvp.pending || 0) + (rsvp.tentative || 0)} sub={`${rsvp.declined || 0} declined`} tone="amber" />
         <Stat label="Checked in" value={totals.checked_in || 0} tone="blue" />
       </div>
@@ -115,10 +120,15 @@ function Stat({ label, value, sub, tone }) {
   return (
     <div className={`stat ${tone ? `stat-${tone}` : ''}`}>
       <div className="stat-label">{label}</div>
-      <div className="stat-value">{value ?? 0}</div>
+      <div className="stat-value"><CountUp value={value ?? 0} /></div>
       {sub && <div className="stat-sub">{sub}</div>}
     </div>
   );
+}
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
 
 function Bars({ data, labels, total }) {

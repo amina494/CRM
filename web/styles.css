@@ -53,6 +53,13 @@
   --font-display: 'IBM Plex Serif', Georgia, serif;
   --radius: 10px;
 
+  /* Motion: the "pop". A spring curve that overshoots a little, then settles. */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 160ms;
+  --t-pop: 320ms;
+  --shadow-lift: 0 2px 4px rgba(30, 27, 26, 0.05), 0 14px 32px -8px rgba(30, 27, 26, 0.18);
+
   color-scheme: light;
   font-family: var(--font);
   font-size: 14px;
@@ -65,7 +72,7 @@
   :root:not([data-theme='light']) {
     --bg: #141211; --surface: #1d1a19; --surface-2: #24201f; --line: #363130; --line-soft: #2a2625;
     --text: #efebe8; --muted: #a49c97; --label: #c9c1bc; --link: #ff8a57; --accent-ink: #ff8a57;
-    --backdrop: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --backdrop: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3); --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 36px -8px rgba(0, 0, 0, 0.6);
     --green: #4ade80; --red: #f87171; --amber: #fbbf24; --blue: #7aa2ff; --teal: #2dd4bf; --violet: #b69cff; --gray: #9ca3af;
     --primary: var(--accent); --primary-hover: #ff7a40; --on-primary: var(--on-accent);
     color-scheme: dark;
@@ -74,7 +81,7 @@
 :root[data-theme='dark'] {
   --bg: #141211; --surface: #1d1a19; --surface-2: #24201f; --line: #363130; --line-soft: #2a2625;
   --text: #efebe8; --muted: #a49c97; --label: #c9c1bc; --link: #ff8a57; --accent-ink: #ff8a57;
-  --backdrop: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --backdrop: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3); --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 36px -8px rgba(0, 0, 0, 0.6);
   --green: #4ade80; --red: #f87171; --amber: #fbbf24; --blue: #7aa2ff; --teal: #2dd4bf; --violet: #b69cff; --gray: #9ca3af;
   --primary: var(--accent); --primary-hover: #ff7a40; --on-primary: var(--on-accent);
   color-scheme: dark;
@@ -210,7 +217,7 @@ textarea { resize: vertical; }
 
 /* --- Tables ----------------------------------------------------------- */
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.table { width: 100%; border-collapse: collapse; }
+.table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; }
 .table td { padding: 10px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
 .table tbody tr:last-child td { border-bottom: 0; }
@@ -550,3 +557,157 @@ textarea { resize: vertical; }
 .import-details[open] summary { margin-bottom: 8px; }
 .import-filter { max-width: 320px; width: 100%; }
 @media (max-width: 760px) { .import-stats { grid-template-columns: 1fr 1fr; } }
+
+/* ======================================================================
+   MOTION – everything you touch "pops": it lifts toward you on hover,
+   gives a little under your finger on press, and settles with a spring.
+   Hover effects only run on devices with a real pointer, so phones don't
+   get stuck in a hovered state; presses work everywhere. Everything is
+   switched off for people who ask their device for reduced motion.
+   ====================================================================== */
+
+/* Sidebar: items slide over and their icon swells into an orange bubble */
+.nav-link { position: relative; transition: background var(--t-fast), color var(--t-fast), transform var(--t-pop) var(--ease-pop); }
+.nav-icon {
+  width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; margin: -5px 0 -5px -4px;
+  transition: transform var(--t-pop) var(--ease-pop), background var(--t-fast), color var(--t-fast);
+}
+.nav-link.active { box-shadow: none; }
+.nav-link.active .nav-icon { background: var(--accent); color: var(--on-accent); }
+.nav-link.active::before {
+  content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0;
+  background: var(--accent); animation: nav-mark var(--t-pop) var(--ease-pop);
+}
+@keyframes nav-mark { from { transform: scaleY(0); } }
+.nav-link:active { transform: scale(0.96); }
+@media (hover: hover) {
+  .nav-link:hover { transform: translateX(4px); }
+  .nav-link:hover .nav-icon { transform: scale(1.18); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .nav-link.active:hover .nav-icon { background: var(--accent); }
+}
+.theme-switch button { transition: background var(--t-fast), color var(--t-fast), transform var(--t-pop) var(--ease-pop); }
+.theme-switch button:active { transform: scale(0.92); }
+
+/* Buttons, chips and small controls */
+.btn, .chip, .segmented button, .rsvp-choice, .theme-swatch, .icon-btn {
+  transition: transform var(--t-pop) var(--ease-pop), box-shadow var(--t-fast), background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.btn:active:not(:disabled), .chip:active, .theme-swatch:active, .icon-btn:active { transform: scale(0.95); }
+@media (hover: hover) {
+  .btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .btn-primary:hover:not(:disabled) { box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--primary) 70%, transparent); }
+  .btn-ghost:hover:not(:disabled) { box-shadow: var(--shadow-lift); }
+  .chip:hover, .theme-swatch:hover { transform: translateY(-2px) scale(1.04); }
+  .badge { transition: transform var(--t-pop) var(--ease-pop); }
+  tr:hover .badge, li:hover > .badge { transform: scale(1.06); }
+}
+
+/* Cards and stat tiles lift */
+.card, .stat, .table-wrap { transition: transform var(--t-pop) var(--ease-pop), box-shadow var(--t-pop) var(--ease-out), border-color var(--t-fast); }
+@media (hover: hover) {
+  .stat:hover { transform: translateY(-5px); box-shadow: var(--shadow-lift); }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+  .event-card:hover { border-color: var(--accent-line); }
+  /* Things that hold a table or a long form stay put so rows are easy to aim at */
+  .card:has(.table):hover, .card:has(form):hover, .card:has(.seats):hover, .modal .card:hover { transform: none; }
+}
+
+/* Table rows pop out of the table */
+.table tbody tr { position: relative; transition: transform var(--t-pop) var(--ease-pop), box-shadow var(--t-pop) var(--ease-out), background var(--t-fast); }
+.table tbody td:first-child { position: relative; }
+.table tbody td:first-child::before {
+  content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--accent); transform: scaleY(0); transition: transform var(--t-pop) var(--ease-pop);
+}
+.table-wrap .table tbody tr:active:not(.no-click) { transform: scale(0.99); }
+@media (hover: hover) {
+  .table tbody tr:hover { background: var(--surface); transform: translateY(-2px); box-shadow: var(--shadow-lift); z-index: 1; }
+  .table tbody tr:hover td { border-bottom-color: transparent; }
+  .table tbody tr:hover td:first-child::before { transform: scaleY(1); }
+  .table-wrap .table tbody tr:hover { background: var(--surface); }
+}
+
+/* List and timeline lines slide over */
+.list li, .timeline li, .todo li, .picker-row, .seats li, .checkin-party-row {
+  transition: transform var(--t-pop) var(--ease-pop), background var(--t-fast);
+  border-radius: 8px;
+}
+@media (hover: hover) {
+  .list li:hover, .timeline li:hover, .seats li:hover, .checkin-party-row:hover { transform: translateX(6px); background: var(--surface-2); }
+  .todo li:hover { transform: translateX(6px); }
+  .picker-row:hover { transform: translateX(4px); background: var(--surface-2); }
+}
+.timeline li, .list li { padding-left: 6px; padding-right: 6px; }
+
+/* Flights cards nudge right with their stripe */
+.flight { transition: transform var(--t-pop) var(--ease-pop), box-shadow var(--t-pop) var(--ease-out), border-left-width var(--t-pop) var(--ease-pop); }
+@media (hover: hover) { .flight:hover { border-left-width: 8px; } }
+
+/* Pages arrive: each block rises in, one after another */
+.page > * { animation: rise-in 520ms var(--ease-out) both; }
+.page > *:nth-child(2) { animation-delay: 50ms; }
+.page > *:nth-child(3) { animation-delay: 100ms; }
+.page > *:nth-child(4) { animation-delay: 150ms; }
+.page > *:nth-child(5) { animation-delay: 200ms; }
+.page > *:nth-child(n + 6) { animation-delay: 250ms; }
+.stats > * { animation: rise-in 560ms var(--ease-pop) both; }
+.stats > *:nth-child(2) { animation-delay: 60ms; }
+.stats > *:nth-child(3) { animation-delay: 120ms; }
+.stats > *:nth-child(4) { animation-delay: 180ms; }
+.stats > *:nth-child(5) { animation-delay: 240ms; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } }
+/* The page title is revealed with a soft sweep, like ink filling in */
+.page-head h1 {
+  background: linear-gradient(90deg, var(--text) 0 45%, color-mix(in srgb, var(--text) 25%, transparent) 55% 100%);
+  background-size: 240% 100%; background-position: 0 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: ink-in 900ms var(--ease-out) both;
+}
+@keyframes ink-in { from { background-position: 100% 0; } }
+.bar-fill { animation: grow-x 900ms var(--ease-out) both; transform-origin: left; }
+@keyframes grow-x { from { transform: scaleX(0); } }
+
+/* Dialogs spring open */
+.modal-backdrop { animation: fade-in 200ms ease both; }
+.modal { animation: pop-in var(--t-pop) var(--ease-pop) both; }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(10px) scale(0.96); } }
+
+/* Loading skeletons that shimmer instead of a "Loading…" line */
+.skeleton-page { display: flex; flex-direction: column; gap: 16px; max-width: 1400px; }
+.sk { background: linear-gradient(100deg, var(--line-soft) 30%, color-mix(in srgb, var(--surface) 70%, var(--line-soft)) 50%, var(--line-soft) 70%); background-size: 300% 100%; animation: shimmer 1.3s linear infinite; border-radius: var(--radius); }
+.sk-title { height: 26px; width: 240px; }
+.sk-sub { height: 12px; width: 160px; margin-top: -8px; }
+.sk-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sk-tile { height: 96px; }
+.sk-block { height: 240px; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -50% 0; } }
+@media (max-width: 860px) { .sk-tiles { grid-template-columns: 1fr 1fr; } }
+
+/* Dashboard greeting and the orange hero tile */
+.greeting { font-size: 26px; letter-spacing: -0.01em; }
+.stats.with-hero { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.stat-hero {
+  grid-column: span 2; grid-row: span 1; border: 0; color: var(--on-primary); position: relative; overflow: hidden;
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent) 85%, #fff) 0%, transparent 55%),
+    linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  box-shadow: 0 14px 34px -14px color-mix(in srgb, var(--primary) 80%, transparent);
+}
+.stat-hero .stat-label, .stat-hero .stat-sub { color: color-mix(in srgb, var(--on-primary) 82%, transparent); }
+.stat-hero .stat-value { font-size: 40px; letter-spacing: -0.02em; }
+.stat-hero .hero-track { height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--on-primary) 25%, transparent); margin: 10px 0 6px; overflow: hidden; }
+.stat-hero .hero-fill { display: block; height: 100%; border-radius: 99px; background: var(--on-primary); animation: grow-x 1100ms var(--ease-out) 200ms both; transform-origin: left; }
+.stat-hero::after { content: ''; position: absolute; width: 180px; height: 180px; border-radius: 50%; right: -60px; bottom: -90px; border: 28px solid color-mix(in srgb, var(--on-primary) 10%, transparent); transition: transform 600ms var(--ease-pop); }
+@media (hover: hover) { .stat-hero:hover::after { transform: scale(1.15) translate(-10px, -6px); } .stat-hero:hover { box-shadow: 0 22px 44px -14px color-mix(in srgb, var(--primary) 85%, transparent); } }
+.stat-value { font-variant-numeric: tabular-nums; }
+@media (max-width: 1100px) { .stats.with-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Switching light / dark: the new theme spreads out from where you clicked */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
+  .page-head h1 { background: none; color: var(--text); }
+}

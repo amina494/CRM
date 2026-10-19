@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api.js';
 import { Loading } from './components/ui.jsx';
@@ -94,6 +95,29 @@ function applyEventTheme(theme) {
 :root[data-theme='dark'] { ${dark} }`;
 }
 
+/**
+ * Changes the theme with the new colours spreading out in a circle from
+ * the button that was clicked (where the browser supports it).
+ */
+function switchTheme(next, e, setTheme) {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (!document.startViewTransition || reduce) { setTheme(next); return; }
+  const x = e.clientX || window.innerWidth / 2;
+  const y = e.clientY || window.innerHeight / 2;
+  const r = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  const t = document.startViewTransition(() => {
+    flushSync(() => setTheme(next));
+    const root = document.documentElement;
+    if (next === 'auto') delete root.dataset.theme; else root.dataset.theme = next;
+  });
+  t.ready.then(() => {
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+      { duration: 650, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', pseudoElement: '::view-transition-new(root)' },
+    );
+  }).catch(() => {});
+}
+
 const ROLE_LABEL = { admin: 'Admin', coordinator: 'Coordinator', liaison: 'Liaison / host', viewer: 'Viewer' };
 
 function StaffApp() {
@@ -157,7 +181,7 @@ function StaffApp() {
     canEdit: can.manage, isAdmin: can.admin,
   }), [me, meta, event, events, can]);
 
-  if (me === undefined) return <Loading />;
+  if (me === undefined) return <Loading plain />;
   if (!me) return <Login onLogin={loadMe} />;
   // Roles that must use a one-time code set it up before anything else.
   if (me.totp_setup_required) {
@@ -167,7 +191,7 @@ function StaffApp() {
       </Ctx.Provider>
     );
   }
-  if (!events) return <Loading />;
+  if (!events) return <Loading plain />;
 
   const logout = async () => {
     await api.post('/auth/logout');
@@ -199,7 +223,7 @@ function StaffApp() {
           </nav>
           <div className="theme-switch" role="group" aria-label="Theme">
             {[['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(([k, label]) => (
-              <button key={k} className={theme === k ? 'on' : ''} onClick={() => setTheme(k)}>{label}</button>
+              <button key={k} className={theme === k ? 'on' : ''} onClick={(e) => switchTheme(k, e, setTheme)}>{label}</button>
             ))}
           </div>
           <div className="sidebar-foot">
