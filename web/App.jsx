@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
+import {
+  Armchair, BedDouble, CalendarDays, Car, LayoutDashboard, Plane, Route as RouteIcon, ScanLine, Send, ShieldCheck, UserCog, Users,
+} from 'lucide-react';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api.js';
 import { Loading } from './components/ui.jsx';
@@ -43,18 +46,18 @@ export default function App() {
 // [path, label, icon, who sees it]. The server enforces every rule; hiding
 // menu items only keeps the screen tidy.
 const NAV = [
-  ['/', 'Dashboard', '◧', (c) => c.overview],
-  ['/guests', 'Guests & RSVP', '☰', () => true],
-  ['/transfers', 'Movements', '➜', () => true],
-  ['/flights', 'Flights', '✈', () => true],
-  ['/accommodation', 'Accommodation', '⌂', () => true],
-  ['/seating', 'Seating', '◎', (c) => c.overview],
-  ['/fleet', 'Cars & drivers', '⛟', () => true],
-  ['/check-in', 'Check-in', '✓', (c) => c.handle],
-  ['/messages', 'Outbox', '✉', (c) => c.overview],
-  ['/staff', 'Staff', '☺', () => true],
-  ['/events', 'Events', '★', () => true],
-  ['/audit', 'Audit trail', '⌕', (c) => c.admin],
+  ['/', 'Dashboard', LayoutDashboard, (c) => c.overview],
+  ['/guests', 'Guests & RSVP', Users, () => true],
+  ['/transfers', 'Movements', RouteIcon, () => true],
+  ['/flights', 'Flights', Plane, () => true],
+  ['/accommodation', 'Accommodation', BedDouble, () => true],
+  ['/seating', 'Seating', Armchair, (c) => c.overview],
+  ['/fleet', 'Cars & drivers', Car, () => true],
+  ['/check-in', 'Check-in', ScanLine, (c) => c.handle],
+  ['/messages', 'Outbox', Send, (c) => c.overview],
+  ['/staff', 'Staff', UserCog, () => true],
+  ['/events', 'Events', CalendarDays, () => true],
+  ['/audit', 'Audit trail', ShieldCheck, (c) => c.admin],
 ];
 
 const RANK = { viewer: 1, liaison: 2, coordinator: 3, admin: 4 };
@@ -215,9 +218,9 @@ function StaffApp() {
             </select>
           )}
           <nav>
-            {NAV.filter((n) => n[3](can)).map(([to, label, icon]) => (
+            {NAV.filter((n) => n[3](can)).map(([to, label, Icon]) => (
               <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                <span className="nav-icon" aria-hidden>{icon}</span>{label}
+                <span className="nav-icon" aria-hidden><Icon size={16} strokeWidth={2} /></span>{label}
               </NavLink>
             ))}
           </nav>

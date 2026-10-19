@@ -165,11 +165,18 @@ r.get('/events/:id/dashboard', (req, res) => {
          FROM transfer_passengers tp JOIN guests g ON g.id = tp.guest_id WHERE tp.transfer_id = t.id) AS passenger_names
     FROM transfers t LEFT JOIN drivers d ON d.id = t.driver_id LEFT JOIN vehicles v ON v.id = t.vehicle_id
     WHERE t.event_id = ? AND substr(t.scheduled_at, 1, 10) = ? ORDER BY t.scheduled_at`, id, today);
+  // Passengers landing and leaving per day, for the travel chart.
+  const travelByDay = all(`SELECT substr(COALESCE(f.estimated_at, f.scheduled_at), 1, 10) AS day,
+      SUM(CASE WHEN f.direction = 'arrival' THEN 1 ELSE 0 END) AS arrivals,
+      SUM(CASE WHEN f.direction = 'departure' THEN 1 ELSE 0 END) AS departures
+    FROM flights f JOIN flight_passengers p ON p.flight_id = f.id
+    WHERE f.event_id = ? AND COALESCE(f.estimated_at, f.scheduled_at) IS NOT NULL AND f.status != 'cancelled'
+    GROUP BY day ORDER BY day`, id);
   const recentMovements = all(`SELECT m.*, g.first_name, g.last_name, g.title FROM movements m
     JOIN guests g ON g.id = m.guest_id WHERE g.event_id = ? ORDER BY m.recorded_at DESC LIMIT 15`, id);
 
   res.json({ event, today, rsvp, invites, status, category, totals: { ...totals, unhoused },
-    flightsToday, transfersToday, recentMovements });
+    flightsToday, transfersToday, recentMovements, travelByDay });
 });
 
 r.get('/events/:id/activity', (req, res) => {
